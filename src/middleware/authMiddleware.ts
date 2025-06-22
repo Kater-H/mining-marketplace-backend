@@ -85,3 +85,46 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 
 // Alias for authenticate middleware to match usage in routes
 export const authenticateToken = authenticate;
+
+// Alias for authenticate middleware to match usage in routes
+export const protect = authenticate;
+
+// Middleware to check user roles
+export const authorize = (...roles: UserRole[]) => {
+  console.log('🔐 Creating authorize middleware for roles:', roles);
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      console.log('🔐 Authorize middleware called for roles:', roles);
+
+      // Check if user exists on request (set by authenticate middleware)
+      if (!req.user) {
+        console.log('❌ No user found on request after authentication');
+        res.status(401).json({ message: 'Authentication required' });
+        return;
+      }
+
+      const user = req.user;
+      console.log('🔐 User found:', user);
+
+      const userRoles = user.roles as UserRole[];
+      console.log('🔐 User roles:', userRoles);
+      console.log('🔐 Required roles:', roles);
+
+      // Check if user has required role
+      const hasRole = roles.some(role => userRoles.includes(role));
+      console.log('🔐 User has required role:', hasRole);
+
+      if (!hasRole) {
+        console.log('❌ User does not have required role');
+        res.status(403).json({ message: 'Insufficient permissions' });
+        return;
+      }
+
+      console.log('✅ Authorization successful');
+      next();
+    } catch (error) {
+      console.error('❌ Authorization error:', error);
+      res.status(500).json({ message: 'Authorization error' });
+    }
+  };
+};
