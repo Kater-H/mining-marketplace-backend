@@ -1,0 +1,106 @@
+name: CI Pipeline - Backend Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      # Configure a PostgreSQL database service
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: mining_marketplace_test # Use our test database name
+          POSTGRES_USER: test_user             # Use our test user
+          POSTGRES_PASSWORD: test_password     # Use our test password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Or your preferred LTS version
+
+      - name: Install dependencies
+        run: npm ci # Uses package-lock.json for deterministic installs
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          # Loop until pg_isready confirms database is up and accepting connections
+          for i in `seq 1 10`; do
+            nc -z localhost 5432 && break
+            echo "Waiting for PostgreSQL to start..."
+            sleep 5
+          done
+          pg_isready -h localhost -p 5432 -U test_user
+
+      - name: Set up Environment Variables for CI
+        run: |
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/mining_marketplace_test" >> $GITHUB_ENV
+          echo "JWT_SECRET=test_jwt_secret_key_for_testing_purposes_only" >> $GITHUB_ENV
+          echo "STRIPE_SECRET_KEY=test_stripe_secret_key" >> $GITHUB_ENV
+          echo "FLUTTERWAVE_PUBLIC_KEY=test_flutterwave_public_key" >> $GITHUB_ENV
+          echo "FLUTTERWAVE_SECRET_KEY=test_flutterwave_secret_key" >> $GITHUB_ENV
+          echo "FLUTTERWAVE_ENCRYPTION_KEY=test_flutterwave_encryption_key" >> $GITHUB_ENV
+          echo "STRIPE_WEBHOOK_SECRET=whsec_test_webhook_secret" >> $GITHUB_ENV
+          # Add any other environment variables from your .env.ci.template as needed
+
+      - name: Run Database Migrations and Seeding
+        # Assuming you have an npm script like 'npm run db:migrate' and 'npm run db:seed'
+        # These scripts should use the DATABASE_URL from GITHUB_ENV
+        run: |
+          npm run db:migrate # Your script to run database migrations
+          npm run db:seed    # Optional: Your script to seed test data (if not handled by test setup)
+        env:
+          # Pass env vars needed by your migration/seed scripts
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run ESLint (Code Quality)
+        run: npm run lint # Assuming you have a 'lint' script in package-scripts.json
+
+      - name: Run Tests (Unit & Integration)
+        # Assuming you have a 'test:ci' script that runs all tests using jest.config.ci.js
+        run: npm run test:ci -- --coverage --testResultsProcessor="jest-junit"
+        env:
+          # Ensure test scripts also use the CI environment variables
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          STRIPE_SECRET_KEY: ${{ env.STRIPE_SECRET_KEY }}
+          FLUTTERWAVE_PUBLIC_KEY: ${{ env.FLUTTERWAVE_PUBLIC_KEY }}
+          FLUTTERWAVE_SECRET_KEY: ${{ env.FLUTTERWAVE_SECRET_KEY }}
+          FLUTTERWAVE_ENCRYPTION_KEY: ${{ env.FLUTTERWAVE_ENCRYPTION_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ env.STRIPE_WEBHOOK_SECRET }}
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always() # Upload even if tests fail
+        with:
+          name: test-results
+          path: junit.xml # Path to your Jest JUnit XML report
+
+      - name: Upload Coverage Report to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # Set this as a GitHub secret
+          directory: ./coverage # Path to your coverage report
+          files: ./coverage/lcov.info # Or other format if preferred (e.g., coverage/clover.xml)
+          verbose: true # Optional: for more detailed logging
+

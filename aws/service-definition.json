@@ -1,0 +1,48 @@
+{
+  "serviceName": "mining-marketplace-backend-service",
+  "cluster": "mining-marketplace-production-cluster",
+  "taskDefinition": "mining-marketplace-backend",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-PUBLIC_SUBNET_1_ID",
+        "subnet-PUBLIC_SUBNET_2_ID"
+      ],
+      "securityGroups": [
+        "sg-ECS_SECURITY_GROUP_ID"
+      ],
+      "assignPublicIp": "ENABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:REGION:ACCOUNT_ID:targetgroup/mining-marketplace-production-tg/TARGET_GROUP_ID",
+      "containerName": "mining-marketplace-backend",
+      "containerPort": 8080
+    }
+  ],
+  "healthCheckGracePeriodSeconds": 300,
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 50,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
+  },
+  "enableExecuteCommand": true,
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "production"
+    },
+    {
+      "key": "Project",
+      "value": "mining-marketplace"
+    }
+  ]
+}
+

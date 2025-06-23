@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
  * Health check endpoint for container orchestration
  * Returns application status and basic system information
  */
-export const healthCheck = (_req: Request, res: Response): void => {
+export const healthCheck = (req: Request, res: Response): void => {
   const healthStatus = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -25,7 +25,7 @@ export const healthCheck = (_req: Request, res: Response): void => {
  * Readiness check endpoint for container orchestration
  * Checks if the application is ready to receive traffic
  */
-export const readinessCheck = (_req: Request, res: Response): void => {
+export const readinessCheck = (req: Request, res: Response): void => {
   // Add any additional readiness checks here (database connectivity, etc.)
   const readinessStatus = {
     status: 'ready',
@@ -43,9 +43,10 @@ export const readinessCheck = (_req: Request, res: Response): void => {
  * Liveness check endpoint for container orchestration
  * Simple check to verify the application is still running
  */
-export const livenessCheck = (_req: Request, res: Response): void => {
+export const livenessCheck = (req: Request, res: Response): void => {
   res.status(200).json({
     status: 'alive',
     timestamp: new Date().toISOString(),
   });
 };
+
