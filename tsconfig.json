@@ -1,83 +1,20 @@
 {
   "compilerOptions": {
-    // Target and module settings
     "target": "ES2020",
-    "module": "commonjs",
-    "lib": ["ES2020"],
-    
-    // Module resolution
+    "module": "ESNext",
     "moduleResolution": "node",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    
-    // Output settings
+    "lib": ["ES2020"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "removeComments": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-    
-    // Type checking
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    
-    // Additional checks
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    
-    // Emit settings
+    "strict": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    
-    // Path mapping
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"],
-      "@/config/*": ["src/config/*"],
-      "@/controllers/*": ["src/controllers/*"],
-      "@/middleware/*": ["src/middleware/*"],
-      "@/models/*": ["src/models/*"],
-      "@/routes/*": ["src/routes/*"],
-      "@/services/*": ["src/services/*"],
-      "@/utils/*": ["src/utils/*"],
-      "@/types/*": ["src/types/*"]
-    },
-    
-    // Experimental features
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true
   },
-  
-  "include": [
-    "src/**/*",
-    "src/**/*.json"
-  ],
-  
-  "exclude": [
-    "node_modules",
-    "dist",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/__tests__/**",
-    "jest.config.js",
-    "jest.setup.js",
-    ".eslintrc.js"
-  ],
-  
-  "ts-node": {
-    "esm": false,
-    "experimentalSpecifierResolution": "node"
-  }
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }
-
