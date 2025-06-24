@@ -1,15 +1,25 @@
 import { Router } from 'express';
-import { registerUser, verifyEmail, loginUser, getCurrentUser } from '../controllers/userController.ts'; // Add .ts here
-import { protect } from '../middleware/authMiddleware.ts'; // And add .ts here
+import {
+  registerUser,
+  verifyUserEmail,
+  loginUser,
+  getUserProfile,
+  updateUserProfile
+} from '../controllers/userController'; // Removed .ts
+import { authenticate } from '../middleware/authMiddleware'; // Removed .ts
 
 const router = Router();
 
 // Public routes
 router.post('/register', registerUser);
-router.get('/verify/:token', verifyEmail);
+router.get('/verify-email', verifyUserEmail);
 router.post('/login', loginUser);
 
-// Protected routes
-router.get('/me', protect, getCurrentUser);
+// Authenticated routes
+router.use(authenticate); // Apply authentication to all routes below this point
 
-export default router;
+router.get('/profile', getUserProfile);
+router.put('/profile', updateUserProfile);
+
+
+export const userRoutes = router;

@@ -1,6 +1,4 @@
-import { Request, Response } from 'express'; // Keep for types, as @types/express provides these
-// For runtime Express functions like 'express.Router()' or 'express()', you'd typically do:
-// import express from 'express';
+import { Request, Response } from 'express';
 
 /**
  * Health check endpoint for container orchestration

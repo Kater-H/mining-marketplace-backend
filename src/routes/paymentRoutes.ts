@@ -1,28 +1,26 @@
-import * as express from 'express';
-import { authorize } from '../middleware/authMiddleware.ts'; // <--- Add .ts here
-import { 
-  createStripePayment,
-  createFlutterwavePayment,
-  getTransactionById,
-  getUserTransactions,
-  handleStripeWebhook,
-  handleFlutterwaveWebhook
-} from '../controllers/paymentController.ts'; // <--- Add .ts here
+import { Router } from 'express';
+import {
+  createStripePaymentIntent,
+  handleStripeWebhook,
+  createFlutterwavePayment,
+  handleFlutterwaveWebhook,
+  getTransactionById,
+  getUserTransactions
+} from '../controllers/paymentController'; // Removed .ts
+import { authenticate } from '../middleware/authMiddleware'; // Removed .ts
 
-const router = express.Router();
+const router = Router();
 
-// Create payments
-router.post('/stripe/create', authorize('buyer', 'miner', 'admin'), createStripePayment);
-router.post('/flutterwave/create', authorize('buyer', 'miner', 'admin'), createFlutterwavePayment);
+// Webhook routes (no authentication needed for webhooks as they have their own verification)
+router.post('/stripe-webhook', handleStripeWebhook);
+router.post('/flutterwave-webhook', handleFlutterwaveWebhook);
 
-// Get transaction by ID
-router.get('/transactions/:id', authorize('buyer', 'miner', 'admin'), getTransactionById);
+// Authenticated payment routes
+router.use(authenticate); // Apply authentication to all routes below this point
 
-// Get transactions by user
-router.get('/transactions', authorize('buyer', 'miner', 'admin'), getUserTransactions);
+router.post('/stripe-intent', createStripePaymentIntent);
+router.post('/flutterwave-initiate', createFlutterwavePayment);
+router.get('/transactions/:id', getTransactionById);
+router.get('/my-transactions', getUserTransactions);
 
-// Payment gateway webhooks (no auth required)
-router.post('/webhooks/stripe', handleStripeWebhook);
-router.post('/webhooks/flutterwave', handleFlutterwaveWebhook);
-
-export { router as paymentRoutes };
+export const paymentRoutes = router;

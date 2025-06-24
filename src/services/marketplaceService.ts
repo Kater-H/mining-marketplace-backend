@@ -1,12 +1,11 @@
-// First, let me complete the MarketplaceService implementation with additional methods
 import { Pool } from 'pg';
-import { getPool } from '../config/database.ts'; // <--- Add .ts here
+import { getPool } from '../config/database'; // Removed .ts
 import {
   MineralListingData,
   ComplianceData,
   MineralListingFilter,
   MineralOffer
-} from '../models/interfaces/marketplace.ts'; // <--- Add .ts here
+} from '../models/interfaces/marketplace'; // Assuming this is '../models/interfaces/marketplace.ts', removed .ts
 
 // Marketplace service class
 export class MarketplaceService {

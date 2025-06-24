@@ -1,143 +1,59 @@
-// @ts-nocheck
-
-import express from 'express';
-
+import 'dotenv/config'; // Loads environment variables from .env file
+import express, { Express, Request, Response, NextFunction } from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
-
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 
-import * as path from 'path';
+import { healthRoutes } from './routes/healthRoutes';
+import { userRoutes } from './routes/userRoutes';
+import { marketplaceRoutes } from './routes/marketplaceRoutes';
+import { paymentRoutes } from './routes/paymentRoutes';
 
-import { healthRoutes } from './routes/healthRoutes.ts';
+const app: Express = express();
+const PORT = process.env.PORT || 3000;
 
-import { marketplaceRoutes } from './routes/marketplaceRoutes.ts';
+// Security Middleware
+app.use(helmet());
 
-import userRoutes from './routes/userRoutes.ts';
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*', // Adjust in production
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 
-import { paymentRoutes } from './routes/paymentRoutes.ts';
-
-import { config } from './config/config.ts';
-
-// Create Express app
-
-const app = express();
-
-
-
-// Add mock authenticator for tests
-
-if (process.env.NODE_ENV === 'test') {
-
-  console.log('Setting up mock authenticator for tests');
-
-  config.authenticator = {
-
-    validateApiKey: () => true
-
-  };
-
-}
-
-
-
-// Middleware
-
-app.use(cors());
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: true }));
-
+// Logging Middleware
 app.use(morgan('dev'));
 
+// Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use(apiLimiter);
 
-
-// Static files
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-
+// Body Parser for JSON
+app.use(express.json());
 
 // Routes
-
 app.use('/api/health', healthRoutes);
-
-app.use('/api/minerals', marketplaceRoutes);
-
 app.use('/api/users', userRoutes);
-
+app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/payments', paymentRoutes);
 
 
-
-// Default route
-
-app.get('/', (req: express.Request, res: express.Response) => {
-
-  res.json({
-
-    message: 'Mining Marketplace API',
-
-    version: '1.0.0',
-
-    endpoints: [
-
-      '/api/health',
-
-      '/api/minerals',
-
-      '/api/users',
-
-      '/api/payments'
-
-    ]
-
-  });
-
+// Basic error handling middleware
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
-
-
-// Error handling middleware
-
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-
-  console.error('Global error handler:', err);
-
-  
-
-  const statusCode = err.statusCode || 500;
-
-  const message = err.message || 'Internal Server Error';
-
-  
-
-  res.status(statusCode).json({
-
-    error: message,
-
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-
-  });
-
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-
-
-
-// 404 handler
-
-app.use((req: express.Request, res: express.Response) => {
-
-  res.status(404).json({
-
-    error: 'Not Found',
-
-    message: `Route ${req.method} ${req.url} not found`
-
-  });
-
-});
-
-
-
-export { app };

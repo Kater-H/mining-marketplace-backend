@@ -1,52 +1,37 @@
-import * as express from 'express';
-
-import { authorize } from '../middleware/authMiddleware.ts';
-import { 
-
-  createMineralListing, 
-
-  getMineralListings, 
-
+import { Router } from 'express';
+import {
+  getMineralListings,
   getMineralListingById,
-
+  createMineralListing,
   updateMineralListing,
-
   deleteMineralListing,
+  createMineralOffer,
+  updateMineralOfferStatus,
+  getOffersForListing,
+  getOffersByBuyer,
+} from '../controllers/marketplaceController'; // Removed .ts
+import { authenticate, authorize } from '../middleware/authMiddleware'; // Removed .ts
+import { UserRole } from '../interfaces/user'; // Removed .ts
 
-  addPhotoToListing
+const router = Router();
 
-} from '../controllers/marketplaceController.ts';
-
-
-
-const router = express.Router();
-
-
-
-// Get all mineral listings
-
+// Public routes (anyone can view listings)
 router.get('/', getMineralListings);
-
-
-
-// Get a specific mineral listing
-
 router.get('/:id', getMineralListingById);
 
+// Authenticated routes
+router.use(authenticate); // Apply authentication to all routes below this point
+
+// Seller/Admin routes
+router.post('/listings', authorize(UserRole.SELLER, UserRole.ADMIN), createMineralListing);
+router.put('/listings/:id', authorize(UserRole.SELLER, UserRole.ADMIN), updateMineralListing);
+router.delete('/listings/:id', authorize(UserRole.SELLER, UserRole.ADMIN), deleteMineralListing);
+
+// Offer routes
+router.post('/offers', authorize(UserRole.BUYER), createMineralOffer); // Only buyers can create offers
+router.put('/offers/:id/status', authorize(UserRole.SELLER, UserRole.ADMIN), updateMineralOfferStatus); // Sellers/Admins update offer status
+router.get('/listings/:id/offers', authorize(UserRole.SELLER, UserRole.ADMIN), getOffersForListing); // View offers for a listing (seller/admin)
+router.get('/offers/my-offers', authorize(UserRole.BUYER), getOffersByBuyer); // View offers made by current buyer
 
 
-// Create a new mineral listing
-router.post('/', authorize('miner', 'admin'), createMineralListing);
-
-// Update a mineral listing
-router.put('/:id', authorize('miner', 'admin'), updateMineralListing);
-
-// Delete a mineral listing
-router.delete('/:id', authorize('miner', 'admin'), deleteMineralListing);
-
-// Add photo to listing
-router.post('/:listing_id/photos', authorize('miner', 'admin'), addPhotoToListing);
-
-
-
-export { router as marketplaceRoutes };
+export const marketplaceRoutes = router;

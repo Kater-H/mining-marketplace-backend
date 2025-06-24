@@ -1,8 +1,7 @@
-import pkg from 'express';
-const { Request, Response, NextFunction } = pkg;
+import { Request, Response, NextFunction } from 'express'; // Keep for types
 import * as jwt from 'jsonwebtoken';
-import { config } from '../config/config.ts';
-import { UserRole } from '../interfaces/user.ts'; // This import line stays the same, as it imports the type
+import { config } from '../config/config'; // Removed .ts
+import { UserRole } from '../interfaces/user'; // Removed .ts
 
 // Interface for decoded token
 interface DecodedToken {
@@ -36,7 +35,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 1,
         email: 'test@example.com',
-        roles: ['seller', 'buyer'] // Changed back to string literals
+        roles: ['seller', 'buyer'] // Use string literals for type UserRole
       };
       next();
       return;
@@ -48,7 +47,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 2,
         email: 'limited@example.com',
-        roles: ['buyer'] // Changed back to string literal
+        roles: ['buyer'] // Use string literal for type UserRole
       };
       next();
       return;

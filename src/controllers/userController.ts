@@ -1,75 +1,43 @@
-// @ts-nocheck
 import { Request, Response } from 'express';
-import UserService from '../services/userService.ts'; // <--- Add .ts here
+import { UserService } from '../services/userService'; // Removed .ts
+import { UserRegistrationData, UserLoginResponse, UserRole } from '../interfaces/user'; // Removed .ts
 
-// Create an instance of the UserService
-export const userService = new UserService(); // Export the instance
+const userService = new UserService();
 
 // Register a new user
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, role, first_name, last_name } = req.body;
-
-    // Validate input
-    if (!email || !password || !role) {
-      res.status(400).json({ message: 'Please provide email, password, and role' });
-      return;
-    }
-
-    // Validate role
-    const validRoles = ['miner', 'buyer', 'admin', 'verifier'];
-    if (!validRoles.includes(role)) {
-      res.status(400).json({ message: 'Invalid role. Must be miner, buyer, admin, or verifier' });
-      return;
-    }
-
-    // Register user
-    const { user, verificationToken } = await userService.registerUser({
-      email,
-      password,
-      role,
-      first_name,
-      last_name
-    });
-
-    // In a real application, send verification email here
-    // For MVP, we'll just return the token in the response
-
+    const userData: UserRegistrationData = req.body;
+    const { user, verificationToken } = await userService.registerUser(userData);
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'User registered successfully. Please check your email for verification.',
       user,
-      verificationToken, // In production, this would be sent via email
+      verificationToken // In a real app, you might not send this back to the client directly
     });
-  } catch (error: any) {
-    if (error.message === 'Email already in use' || error.message === 'User already exists with this email') {
-      res.status(400).json({ message: error.message });
-    } else {
-      console.error('Registration error:', error);
-      res.status(500).json({ message: 'Server error during registration' });
-    }
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(400).json({ message: (error as Error).message });
   }
 };
 
 // Verify user email
-export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
+export const verifyUserEmail = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { token } = req.params;
-
-    if (!token) {
-      res.status(400).json({ message: 'Verification token is required' });
+    const { token } = req.query;
+    if (!token || typeof token !== 'string') {
+      res.status(400).json({ message: 'Verification token is missing or invalid.' });
       return;
     }
 
-    const verified = await userService.verifyEmail(token);
-
-    if (verified) {
-      res.status(200).json({ message: 'Email verified successfully' });
+    const success = await userService.verifyEmail(token);
+    if (success) {
+      res.status(200).json({ message: 'Email verified successfully!' });
     } else {
-      res.status(400).json({ message: 'Invalid or expired verification token' });
+      res.status(400).json({ message: 'Invalid or expired verification token.' });
     }
   } catch (error) {
-    console.error('Email verification error:', error);
-    res.status(500).json({ message: 'Server error during email verification' });
+    console.error('Error verifying email:', error);
+    res.status(500).json({ message: 'Failed to verify email.', error: (error as Error).message });
   }
 };
 
@@ -77,49 +45,46 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
-      res.status(400).json({ message: 'Please provide email and password' });
+      res.status(400).json({ message: 'Email and password are required.' });
       return;
     }
-
-    const result = await userService.loginUser(email, password);
-    const { user, token } = result;
-
-    res.status(200).json({
-      message: 'Login successful',
-      user,
-      token
-    });
-  } catch (error: any) {
-    console.error('Login error:', error);
-
-    if (error.message === 'Invalid credentials') {
-      res.status(401).json({ message: 'Invalid credentials' });
-    } else if (error.message.includes('Email not verified')) {
-      res.status(401).json({ message: error.message });
-    } else {
-      res.status(500).json({ message: 'Server error during login' });
-    }
+    const { user, token } = await userService.loginUser(email, password);
+    res.status(200).json({ message: 'Login successful', user, token });
+  } catch (error) {
+    console.error('Error logging in user:', error);
+    res.status(401).json({ message: (error as Error).message });
   }
 };
 
-// Get current user
-export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
+// Get user profile
+export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    // The user ID is added by the auth middleware
-    const userId = (req as any).user.id;
-
+    const userId = (req as any).user.id; // User ID from authenticated token
     const user = await userService.getUserById(userId);
-
     if (!user) {
-      res.status(401).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
       return;
     }
-
-    res.status(200).json({ user });
+    res.status(200).json(user);
   } catch (error) {
-    console.error('Get current user error:', error);
-    res.status(500).json({ message: 'Server error getting user data' });
+    console.error('Error getting user profile:', error);
+    res.status(500).json({ message: 'Failed to retrieve user profile', error: (error as Error).message });
+  }
+};
+
+// Update user profile
+export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id; // User ID from authenticated token
+    const updatedUser = await userService.updateUser(userId, req.body);
+    if (!updatedUser) {
+      res.status(404).json({ message: 'User not found or no updates applied.' });
+      return;
+    }
+    res.status(200).json({ message: 'User profile updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ message: 'Failed to update user profile', error: (error as Error).message });
   }
 };

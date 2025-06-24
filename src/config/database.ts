@@ -1,49 +1,37 @@
 import { Pool } from 'pg';
+import { config } from './config'; // Removed .ts
 
-import * as dotenv from 'dotenv';
+let pool: Pool;
 
-
-
-// Load environment variables
-
-dotenv.config();
-
-
-
-// Create a PostgreSQL connection pool
-
-export const pgPool = new Pool({
-
-  host: process.env.DB_HOST || 'localhost',
-
-  port: parseInt(process.env.DB_PORT || '5432'),
-
-  user: process.env.DB_USER || 'postgres',
-
-  password: process.env.DB_PASSWORD || 'postgres',
-
-  database: process.env.DB_NAME || 'mining_marketplace'
-
-});
-
-
-
-// Export a function to get the appropriate pool
-
-// This allows tests to override the pool with their test database
-
+// Function to get or initialize the PostgreSQL connection pool
 export const getPool = (): Pool => {
+  if (!pool) {
+    console.log('Initializing PostgreSQL connection pool...');
+    pool = new Pool({
+      connectionString: config.databaseUrl,
+      ssl: {
+        rejectUnauthorized: false // Use this for Render PostgreSQL, but be cautious in production
+      }
+    });
 
-  // @ts-ignore - Check for test database pool
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err);
+      process.exit(-1); // Exit process if client connection is lost
+    });
 
-  if (global.__TEST_DB_POOL) {
-
-    // @ts-ignore - Use test database pool if available
-
-    return global.__TEST_DB_POOL;
-
-  }
-
-  return pgPool;
-
+    console.log('PostgreSQL pool initialized successfully.');
+  }
+  return pool;
 };
+
+// Optional: Function to close the pool (useful for graceful shutdown)
+export const closePool = async (): Promise<void> => {
+  if (pool) {
+    console.log('Closing PostgreSQL connection pool...');
+    await pool.end();
+    console.log('PostgreSQL pool closed.');
+  }
+};
+
+// Export pgPool for direct use in services (alternative to getPool())
+export const pgPool = getPool();

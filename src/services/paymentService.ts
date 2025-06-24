@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import Flutterwave from 'flutterwave-node-v3';
-import { pgPool } from '../config/database.ts';
-import { config } from '../config/config.ts';
+import { pgPool } from '../config/database'; // Removed .ts
+import { config } from '../config/config'; // Removed .ts
 
 // Initialize payment providers
 const stripe = new Stripe(config.stripeSecretKey, {
