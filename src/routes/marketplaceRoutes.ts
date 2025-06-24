@@ -1,22 +1,21 @@
 import * as express from 'express';
 
-import { authorize } from '../middleware/authMiddleware';
+import { authorize } from '../middleware/authMiddleware.ts';
+import { 
 
-import { 
+  createMineralListing, 
 
-  createMineralListing, 
+  getMineralListings, 
 
-  getMineralListings, 
+  getMineralListingById,
 
-  getMineralListingById,
+  updateMineralListing,
 
-  updateMineralListing,
+  deleteMineralListing,
 
-  deleteMineralListing,
+  addPhotoToListing
 
-  addPhotoToListing
-
-} from '../controllers/marketplaceController';
+} from '../controllers/marketplaceController.ts';
 
 
 
