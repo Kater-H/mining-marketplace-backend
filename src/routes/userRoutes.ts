@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { registerUser, verifyEmail, loginUser, getCurrentUser } from '../controllers/userController';
-import { protect } from '../middleware/authMiddleware';
+import { registerUser, verifyEmail, loginUser, getCurrentUser } from '../controllers/userController.ts'; // Add .ts here
+import { protect } from '../middleware/authMiddleware.ts'; // And add .ts here
 
 const router = Router();
 
