@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { paymentService } from '../services/paymentService';
+import { paymentService } from '../services/paymentService.ts'; // <--- Add .ts here
 import Stripe from 'stripe';
-import { config } from '../config/config';
+import { config } from '../config/config.ts'; // <--- Add .ts here
 
 // Initialize Stripe with webhook secret
 // Changed API version to match type definitions
@@ -15,7 +15,7 @@ export const createStripePayment = async (req: Request, res: Response): Promise<
     console.log('🔍 Payment controller called - createStripePayment');
     console.log('🔍 Request body:', req.body);
     console.log('🔍 Request user:', (req as any).user);
-    
+
     const { amount, currency, listing_id } = req.body;
 
     // Validate input
@@ -28,16 +28,16 @@ export const createStripePayment = async (req: Request, res: Response): Promise<
     // Get user ID from auth middleware
     const user = (req as any).user;
     console.log('🔍 User object from auth middleware:', user);
-    
+
     if (!user) {
       console.log('❌ No user object found');
       res.status(401).json({ message: 'User not authenticated' });
       return;
     }
-    
+
     const buyerId = user.id;
     console.log('🔍 Buyer ID extracted:', buyerId);
-    
+
     if (!buyerId) {
       console.log('❌ No buyer ID found in user object');
       res.status(401).json({ message: 'Invalid user data' });
