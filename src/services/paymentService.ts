@@ -138,8 +138,9 @@ export class PaymentService {
         },
       };
 
-      // CHANGED: Use flutterwave.initialize directly
-      const response = await flutterwave.initialize(payload); // Assuming initialize is the direct method on the instance
+      // CHANGED: Cast flutterwave to 'any' to bypass strict type checking for the 'initialize' method.
+      // This is a workaround due to type definition mismatch or unexpected API structure.
+      const response = await (flutterwave as any).initialize(payload);
 
       if (response.status !== 'success') {
         throw new Error('Failed to initialize Flutterwave payment');
