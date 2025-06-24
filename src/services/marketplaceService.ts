@@ -1,12 +1,12 @@
 // First, let me complete the MarketplaceService implementation with additional methods
 import { Pool } from 'pg';
-import { getPool } from '../config/database';
+import { getPool } from '../config/database.ts'; // <--- Add .ts here
 import {
   MineralListingData,
   ComplianceData,
   MineralListingFilter,
   MineralOffer
-} from '../models/interfaces/marketplace';
+} from '../models/interfaces/marketplace.ts'; // <--- Add .ts here
 
 // Marketplace service class
 export class MarketplaceService {
@@ -32,7 +32,7 @@ export class MarketplaceService {
       const insertListingQuery = `
         INSERT INTO mineral_listings (
           user_id, commodity_type, volume, grade,
-          origin_location, price_per_unit, currency, 
+          origin_location, price_per_unit, currency,
           available, description, status
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -56,7 +56,7 @@ export class MarketplaceService {
 
       // Insert compliance data if provided (skip for now as we don't have compliance table)
       // if (complianceData) {
-      //   // Compliance data insertion would go here
+      //    // Compliance data insertion would go here
       // }
 
       // Commit transaction
@@ -211,7 +211,7 @@ export class MarketplaceService {
       updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
       const query = `
-        UPDATE mineral_listings 
+        UPDATE mineral_listings
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex++}
         RETURNING *
@@ -288,14 +288,14 @@ export class MarketplaceService {
   async updateOfferStatus(offerId: number, status: string): Promise<any> {
     try {
       const query = `
-        UPDATE mineral_offers 
+        UPDATE mineral_offers
         SET status = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
         RETURNING *
       `;
 
       const result = await this.pool.query(query, [status, offerId]);
-      
+
       if (result.rows.length === 0) {
         throw new Error('Offer not found');
       }
@@ -345,4 +345,3 @@ export class MarketplaceService {
     }
   }
 }
-
