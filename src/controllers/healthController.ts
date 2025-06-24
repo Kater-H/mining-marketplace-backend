@@ -1,5 +1,6 @@
-import pkg from 'express'; // Correct way to import Express in an ES Module context
-const { Request, Response } = pkg; // Destructure Request and Response from the default import
+import { Request, Response } from 'express'; // Keep for types, as @types/express provides these
+// For runtime Express functions like 'express.Router()' or 'express()', you'd typically do:
+// import express from 'express';
 
 /**
  * Health check endpoint for container orchestration

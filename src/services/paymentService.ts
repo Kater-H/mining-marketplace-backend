@@ -5,7 +5,7 @@ import { config } from '../config/config.ts';
 
 // Initialize payment providers
 const stripe = new Stripe(config.stripeSecretKey, {
-  apiVersion: '2022-11-15',
+  apiVersion: '2023-10-16', // Updated to a common recent version
 });
 
 const flutterwave = new Flutterwave(
@@ -138,7 +138,8 @@ export class PaymentService {
         },
       };
 
-      const response = await flutterwave.Payments.initiate(payload);
+      // Changed from flutterwave.Payments.initiate to flutterwave.Standard.initiate
+      const response = await flutterwave.Standard.initiate(payload);
 
       if (response.status !== 'success') {
         throw new Error('Failed to initialize Flutterwave payment');
@@ -152,7 +153,7 @@ export class PaymentService {
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
-      `; // This is the line that was causing the EOF error before
+      `;
 
       const transactionResult = await client.query(insertTransactionQuery, [
         buyerId,

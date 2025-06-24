@@ -13,7 +13,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "allowImportingTsExtensions": true, // ADDED: Allows importing with .ts extensions
+    "noEmitOnError": false // ADDED: Allows compilation to proceed even with errors, useful for debugging
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

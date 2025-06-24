@@ -29,12 +29,13 @@
     "stripe": "^18.2.1",
     "ts-node": "10.9.1",
     "typescript": "5.0.4",
-    "@types/pg": "^8.11.7"
+    "@types/pg": "^8.11.7",
+    "discord.js": "^14.15.3"  
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@types/stripe": "^8.0.416"
+    "@types/jest": "^29.5.12"
   }
 }
