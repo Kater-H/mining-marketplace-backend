@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import pkg from 'express'; // Correct way to import Express in an ES Module context
+const { Request, Response, NextFunction } = pkg; // Destructure Request, Response, and NextFunction from the default import
 import * as jwt from 'jsonwebtoken';
-import { config } from '../config/config.ts'; // <--- Add .ts here
-import { UserRole } from '../interfaces/user.ts'; // <--- Add .ts here
+import { config } from '../config/config.ts';
+import { UserRole } from '../interfaces/user.ts';
 
 // Interface for decoded token
 interface DecodedToken {
