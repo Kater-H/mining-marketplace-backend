@@ -8,17 +8,15 @@ import morgan from 'morgan';
 
 import * as path from 'path';
 
-import { healthRoutes } from './src/routes/healthRoutes';
+import { healthRoutes } from './routes/healthRoutes.ts';
 
-import { marketplaceRoutes } from './src/routes/marketplaceRoutes';
+import { marketplaceRoutes } from './routes/marketplaceRoutes.ts';
 
-import userRoutes from './src/routes/userRoutes';
+import userRoutes from './routes/userRoutes.ts';
 
-import { paymentRoutes } from './src/routes/paymentRoutes';
+import { paymentRoutes } from './routes/paymentRoutes.ts';
 
-import { config } from './src/config/config';
-
-
+import { config } from './config/config.ts';
 
 // Create Express app
 
