@@ -1,23 +1,23 @@
-import { Pool } from 'pg'; // Explicitly import Pool type from pg
+import { Pool } from 'pg';
 import { config } from './config';
 
-let poolInstance: Pool; // Renamed to avoid confusion with the Pool type constructor itself
+let poolInstance: Pool;
 
 // Function to get or initialize the PostgreSQL connection pool
 export const getPool = (): Pool => {
   if (!poolInstance) {
     console.log('Initializing PostgreSQL connection pool...');
-    poolInstance = new Pool({ // Instantiate the Pool
+    poolInstance = new Pool({
       connectionString: config.databaseUrl,
       ssl: {
-        rejectUnauthorized: false // Use this for Render PostgreSQL, but be cautious in production
+        rejectUnauthorized: false
       }
     });
 
-    // Directly use the 'on' method. TypeScript should now correctly recognize it.
-    poolInstance.on('error', (err) => { // No need for 'as Pool' if typed correctly at declaration
+    // CHANGED: Cast to 'any' for the 'on' method to bypass strict type checking
+    (poolInstance as any).on('error', (err: Error) => { // Added type for 'err' for clarity
       console.error('Unexpected error on idle client', err);
-      process.exit(-1); // Exit process if client connection is lost
+      process.exit(-1);
     });
 
     console.log('PostgreSQL pool initialized successfully.');

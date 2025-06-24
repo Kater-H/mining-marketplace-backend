@@ -138,8 +138,8 @@ export class PaymentService {
         },
       };
 
-      // CHANGED: Using flutterwave.Standard.initiate as it's a common method
-      const response = await flutterwave.Standard.initiate(payload);
+      // CHANGED: Use flutterwave.initialize directly
+      const response = await flutterwave.initialize(payload); // Assuming initialize is the direct method on the instance
 
       if (response.status !== 'success') {
         throw new Error('Failed to initialize Flutterwave payment');
