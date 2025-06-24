@@ -4,7 +4,7 @@
   "description": "Mining Marketplace Backend API",
   "main": "src/app.ts",
   "scripts": {
-    "start": "ts-node src/app.ts",
+    "start": "cd src && ts-node app.ts",
     "dev": "ts-node src/app.ts"
   },
   "dependencies": {
