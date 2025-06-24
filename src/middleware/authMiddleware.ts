@@ -1,8 +1,8 @@
-import pkg from 'express'; // Correct way to import Express in an ES Module context
-const { Request, Response, NextFunction } = pkg; // Destructure Request, Response, and NextFunction from the default import
+import pkg from 'express';
+const { Request, Response, NextFunction } = pkg;
 import * as jwt from 'jsonwebtoken';
 import { config } from '../config/config.ts';
-import { UserRole } from '../interfaces/user.ts';
+import { UserRole } from '../interfaces/user.ts'; // This import line stays the same
 
 // Interface for decoded token
 interface DecodedToken {
@@ -36,7 +36,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 1,
         email: 'test@example.com',
-        roles: ['seller', 'buyer']
+        roles: [UserRole.SELLER, UserRole.BUYER] // Changed to enum values
       };
       next();
       return;
@@ -48,7 +48,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 2,
         email: 'limited@example.com',
-        roles: ['buyer']
+        roles: [UserRole.BUYER] // Changed to enum values
       };
       next();
       return;

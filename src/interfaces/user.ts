@@ -1,4 +1,10 @@
-export type UserRole = 'buyer' | 'seller' | 'admin' | 'miner' | 'verifier';
+export enum UserRole { // Changed from 'type' to 'enum'
+  BUYER = 'buyer',
+  SELLER = 'seller',
+  ADMIN = 'admin',
+  MINER = 'miner',
+  VERIFIER = 'verifier',
+}
 
 export interface User {
   id: number;
@@ -30,5 +36,5 @@ export interface UserLoginResponse {
   token: string;
 }
 
-// Dummy export to ensure the file is treated as a module with value exports
+// You can keep this dummy export, but the enum itself creates a value export
 export const __esModule = true;
