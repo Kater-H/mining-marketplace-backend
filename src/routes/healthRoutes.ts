@@ -17,6 +17,6 @@ router.get(
   healthController.detailedHealthCheck.bind(healthController)
 );
 
-export default router;
+export { router as healthRoutes };
 
 
