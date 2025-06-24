@@ -5,7 +5,7 @@ import { config } from '../config/config';
 
 // Initialize payment providers
 const stripe = new Stripe(config.stripeSecretKey, {
-  apiVersion: '2023-10-16' as Stripe.LatestApiVersion, // CHANGED: Assert to a known valid type
+  apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
 });
 
 const flutterwave = new Flutterwave(
@@ -138,8 +138,8 @@ export class PaymentService {
         },
       };
 
-      // CHANGED: Reverted to flutterwave.Payments.initiate
-      const response = await flutterwave.Payments.initiate(payload);
+      // CHANGED: Using flutterwave.Standard.initiate as it's a common method
+      const response = await flutterwave.Standard.initiate(payload);
 
       if (response.status !== 'success') {
         throw new Error('Failed to initialize Flutterwave payment');
