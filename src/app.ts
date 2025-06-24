@@ -5,6 +5,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 
+// CONFIRM: Ensure no .ts extensions here in the source file
 import { healthRoutes } from './routes/healthRoutes';
 import { userRoutes } from './routes/userRoutes';
 import { marketplaceRoutes } from './routes/marketplaceRoutes';

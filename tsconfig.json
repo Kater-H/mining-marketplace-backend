@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "NodeNext", // CHANGED: Use NodeNext for proper ESM output with .js extensions
+    "moduleResolution": "NodeNext", // CHANGED: Use NodeNext for module resolution
     "lib": ["ES2020"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -14,7 +14,6 @@
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
-    // "allowImportingTsExtensions": true, // REMOVED: This option is not compatible with emitting JS
     "noEmitOnError": false
   },
   "include": ["src/**/*"],
