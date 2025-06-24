@@ -1,5 +1,5 @@
-import { Pool } from 'pg';
-import { config } from './config'; // Removed .ts
+import { Pool } from 'pg'; // Explicitly import Pool
+import { config } from './config';
 
 let pool: Pool;
 
@@ -14,7 +14,8 @@ export const getPool = (): Pool => {
       }
     });
 
-    pool.on('error', (err) => {
+    // Ensure 'pool' is correctly typed as Pool (which has 'on')
+    (pool as Pool).on('error', (err) => { // Added type assertion for robustness
       console.error('Unexpected error on idle client', err);
       process.exit(-1); // Exit process if client connection is lost
     });

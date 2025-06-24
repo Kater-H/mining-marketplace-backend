@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { MarketplaceService } from '../services/marketplaceService'; // Removed .ts
-import { UserService } from '../services/userService'; // Removed .ts
-import { UserRole } from '../interfaces/user'; // Removed .ts
+import { MarketplaceService } from '../services/marketplaceService';
+import { UserService } from '../services/userService';
+import { UserRole } from '../interfaces/user'; // This imports the type correctly
 
 const marketplaceService = new MarketplaceService();
 const userService = new UserService();
@@ -42,8 +42,8 @@ export const createMineralListing = async (req: Request, res: Response): Promise
     const userRole = (req as any).user.roles[0]; // Assuming roles is an array, take the first one
     console.log('User Role:', userRole);
 
-    // Basic role check
-    if (userRole !== UserRole.SELLER && userRole !== UserRole.ADMIN) {
+    // Basic role check - Use string literals directly
+    if (userRole !== 'seller' && userRole !== 'admin') { // CHANGED: Used string literals
       res.status(403).json({ message: 'Forbidden: Only sellers or admins can create listings' });
       return;
     }
@@ -72,7 +72,7 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
 
     // Check if user is the owner or an admin
     const isOwner = listing.user_id === userId;
-    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isAdmin = userRoles.includes('admin'); // CHANGED: Used string literal
 
     if (!isOwner && !isAdmin) {
       res.status(403).json({ message: 'Forbidden: You can only update your own listings or be an admin' });
@@ -102,7 +102,7 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
 
     // Check if user is the owner or an admin
     const isOwner = listing.user_id === userId;
-    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isAdmin = userRoles.includes('admin'); // CHANGED: Used string literal
 
     if (!isOwner && !isAdmin) {
       res.status(403).json({ message: 'Forbidden: You can only delete your own listings or be an admin' });
@@ -117,7 +117,7 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
     }
   } catch (error) {
     console.error('Error deleting mineral listing:', error);
-    res.status(500).json({ message: 'Failed to delete mineral listing', error: (error as Error).message });
+    throw error;
   }
 };
 
@@ -142,7 +142,7 @@ export const updateMineralOfferStatus = async (req: Request, res: Response): Pro
     const userRoles = (req as any).user.roles;
 
     // Check if user is seller or admin
-    if (!userRoles.includes(UserRole.SELLER) && !userRoles.includes(UserRole.ADMIN)) {
+    if (!userRoles.includes('seller') && !userRoles.includes('admin')) { // CHANGED: Used string literals
       res.status(403).json({ message: 'Forbidden: Only sellers or admins can update offer status' });
       return;
     }
@@ -169,7 +169,7 @@ export const getOffersForListing = async (req: Request, res: Response): Promise<
     }
 
     const isOwner = listing.user_id === userId;
-    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isAdmin = userRoles.includes('admin'); // CHANGED: Used string literal
 
     if (!isOwner && !isAdmin) {
       res.status(403).json({ message: 'Forbidden: You can only view offers for your own listings or as an admin' });
@@ -193,7 +193,7 @@ export const getOffersByBuyer = async (req: Request, res: Response): Promise<voi
 
     // A user can only view their own offers unless they are an admin
     const isOwner = buyerId === userId;
-    const isAdmin = userRoles.includes(UserRole.ADMIN);
+    const isAdmin = userRoles.includes('admin'); // CHANGED: Used string literal
 
     if (!isOwner && !isAdmin) {
       res.status(403).json({ message: 'Forbidden: You can only view your own offers or as an admin' });

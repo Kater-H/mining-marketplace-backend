@@ -9,9 +9,9 @@ import {
   updateMineralOfferStatus,
   getOffersForListing,
   getOffersByBuyer,
-} from '../controllers/marketplaceController'; // Removed .ts
-import { authenticate, authorize } from '../middleware/authMiddleware'; // Removed .ts
-import { UserRole } from '../interfaces/user'; // Removed .ts
+} from '../controllers/marketplaceController';
+import { authenticate, authorize } from '../middleware/authMiddleware';
+import { UserRole } from '../interfaces/user'; // Imports the type correctly
 
 const router = Router();
 
@@ -22,16 +22,16 @@ router.get('/:id', getMineralListingById);
 // Authenticated routes
 router.use(authenticate); // Apply authentication to all routes below this point
 
-// Seller/Admin routes
-router.post('/listings', authorize(UserRole.SELLER, UserRole.ADMIN), createMineralListing);
-router.put('/listings/:id', authorize(UserRole.SELLER, UserRole.ADMIN), updateMineralListing);
-router.delete('/listings/:id', authorize(UserRole.SELLER, UserRole.ADMIN), deleteMineralListing);
+// Seller/Admin routes - Use string literals directly
+router.post('/listings', authorize('seller', 'admin'), createMineralListing); // CHANGED: Used string literals
+router.put('/listings/:id', authorize('seller', 'admin'), updateMineralListing); // CHANGED: Used string literals
+router.delete('/listings/:id', authorize('seller', 'admin'), deleteMineralListing); // CHANGED: Used string literals
 
 // Offer routes
-router.post('/offers', authorize(UserRole.BUYER), createMineralOffer); // Only buyers can create offers
-router.put('/offers/:id/status', authorize(UserRole.SELLER, UserRole.ADMIN), updateMineralOfferStatus); // Sellers/Admins update offer status
-router.get('/listings/:id/offers', authorize(UserRole.SELLER, UserRole.ADMIN), getOffersForListing); // View offers for a listing (seller/admin)
-router.get('/offers/my-offers', authorize(UserRole.BUYER), getOffersByBuyer); // View offers made by current buyer
+router.post('/offers', authorize('buyer'), createMineralOffer); // CHANGED: Used string literal
+router.put('/offers/:id/status', authorize('seller', 'admin'), updateMineralOfferStatus); // CHANGED: Used string literals
+router.get('/listings/:id/offers', authorize('seller', 'admin'), getOffersForListing); // CHANGED: Used string literals
+router.get('/offers/my-offers', authorize('buyer'), getOffersByBuyer); // CHANGED: Used string literal
 
 
 export const marketplaceRoutes = router;

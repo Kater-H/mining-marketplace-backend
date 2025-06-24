@@ -9,5 +9,6 @@ export const config = {
     flutterwavePublicKey: process.env.FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-X',
     flutterwaveSecretKey: process.env.FLUTTERWAVE_SECRET_KEY || 'FLWSECK-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-X',
     discordBotToken: process.env.DISCORD_BOT_TOKEN || 'YOUR_DISCORD_BOT_TOKEN', // For monitoring/notifications
-    discordChannelId: process.env.DISCORD_CHANNEL_ID || 'YOUR_DISCORD_CHANNEL_ID' // For monitoring/notifications
+    discordChannelId: process.env.DISCORD_CHANNEL_ID || 'YOUR_DISCORD_CHANNEL_ID', // For monitoring/notifications
+    logLevel: process.env.LOG_LEVEL || 'info' // ADDED: Default log level
 };

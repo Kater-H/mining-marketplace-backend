@@ -1,11 +1,11 @@
 import Stripe from 'stripe';
 import Flutterwave from 'flutterwave-node-v3';
-import { pgPool } from '../config/database'; // Removed .ts
-import { config } from '../config/config'; // Removed .ts
+import { pgPool } from '../config/database';
+import { config } from '../config/config';
 
 // Initialize payment providers
 const stripe = new Stripe(config.stripeSecretKey, {
-  apiVersion: '2023-10-16', // Updated to a common recent version
+  apiVersion: '2023-10-16' as Stripe.LatestApiVersion, // CHANGED: Assert to a known valid type
 });
 
 const flutterwave = new Flutterwave(
@@ -138,8 +138,8 @@ export class PaymentService {
         },
       };
 
-      // Changed from flutterwave.Payments.initiate to flutterwave.Standard.initiate
-      const response = await flutterwave.Standard.initiate(payload);
+      // CHANGED: Reverted to flutterwave.Payments.initiate
+      const response = await flutterwave.Payments.initiate(payload);
 
       if (response.status !== 'success') {
         throw new Error('Failed to initialize Flutterwave payment');

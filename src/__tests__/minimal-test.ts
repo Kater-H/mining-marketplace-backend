@@ -1,13 +1,12 @@
-// Fix 1: Add types for Jest (or your chosen test runner like Mocha)
-import { healthCheck } from '../controllers/healthController'; // Removed .ts
-import { Request, Response } from 'express'; // Import Request/Response types for mocking
+import { healthCheck } from '../controllers/healthController';
+import { Request, Response } from 'express'; // Import Request/Response types
 
-// Fix 2: Mock Request and Response objects for testing
+// Fix: Mock Request and Response objects for testing with broader type casting
 const mockRequest = {} as Request;
 const mockResponse = {
   status: jest.fn().mockReturnThis(), // Mock status method to allow chaining .json()
   json: jest.fn(), // Mock json method
-} as Response;
+} as unknown as Response; // CHANGED: Cast through unknown to bypass strict type checking
 
 describe('Health Controller', () => {
   it('should return a healthy status', () => {
