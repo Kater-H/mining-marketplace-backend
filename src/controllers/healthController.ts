@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import pkg from 'express'; // Correct way to import Express in an ES Module context
+const { Request, Response } = pkg; // Destructure Request and Response from the default import
 
 /**
  * Health check endpoint for container orchestration
@@ -49,4 +50,3 @@ export const livenessCheck = (req: Request, res: Response): void => {
     timestamp: new Date().toISOString(),
   });
 };
-
