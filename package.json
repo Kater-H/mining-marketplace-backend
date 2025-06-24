@@ -2,10 +2,11 @@
   "name": "mining-marketplace-backend",
   "version": "1.0.0",
   "description": "Mining Marketplace Backend API",
-  "main": "src/app.ts",
+  "main": "dist/app.js",  <-- CHANGED: Points to compiled JS
   "type": "module",
   "scripts": {
-    "start": "ts-node src/app.ts",
+    "build": "tsc",       <-- ADDED: Script to compile TypeScript
+    "start": "node dist/app.js", <-- CHANGED: Runs compiled JS
     "dev": "ts-node src/app.ts"
   },
   "dependencies": {
@@ -27,13 +28,13 @@
     "pg": "^8.16.2",
     "stripe": "^18.2.1",
     "ts-node": "10.9.1",
-    "typescript": "5.0.4"
+    "typescript": "5.0.4",
+    "@types/pg": "^8.11.7"  <-- Ensure this is present from previous steps
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.15.4",
     "@types/stripe": "^8.0.416"
   }
 }

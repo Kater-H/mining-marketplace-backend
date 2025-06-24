@@ -1,10 +1,4 @@
-export enum UserRole { // Changed from 'type' to 'enum'
-  BUYER = 'buyer',
-  SELLER = 'seller',
-  ADMIN = 'admin',
-  MINER = 'miner',
-  VERIFIER = 'verifier',
-}
+export type UserRole = 'buyer' | 'seller' | 'admin' | 'miner' | 'verifier'; // Changed from 'enum' back to 'type'
 
 export interface User {
   id: number;
@@ -36,5 +30,6 @@ export interface UserLoginResponse {
   token: string;
 }
 
-// You can keep this dummy export, but the enum itself creates a value export
-export const __esModule = true;
+// You can remove this dummy export now as it's not strictly necessary with type exports.
+// If you want to keep it just in case, it doesn't hurt, but for now, let's remove it for clarity.
+// export const __esModule = true;

@@ -2,7 +2,7 @@ import pkg from 'express';
 const { Request, Response, NextFunction } = pkg;
 import * as jwt from 'jsonwebtoken';
 import { config } from '../config/config.ts';
-import { UserRole } from '../interfaces/user.ts'; // This import line stays the same
+import { UserRole } from '../interfaces/user.ts'; // This import line stays the same, as it imports the type
 
 // Interface for decoded token
 interface DecodedToken {
@@ -36,7 +36,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 1,
         email: 'test@example.com',
-        roles: [UserRole.SELLER, UserRole.BUYER] // Changed to enum values
+        roles: ['seller', 'buyer'] // Changed back to string literals
       };
       next();
       return;
@@ -48,7 +48,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 2,
         email: 'limited@example.com',
-        roles: [UserRole.BUYER] // Changed to enum values
+        roles: ['buyer'] // Changed back to string literal
       };
       next();
       return;
@@ -73,7 +73,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 export const protect = authenticate;
 
 // Middleware to check user roles
-export const authorize = (...roles: UserRole[]) => {
+export const authorize = (...roles: UserRole[]) => { // `roles` here still correctly infers UserRole type
   console.log('🔍 Creating authorize middleware for roles:', roles);
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
