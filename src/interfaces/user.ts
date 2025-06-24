@@ -29,3 +29,6 @@ export interface UserLoginResponse {
   user: Omit<User, 'password' | 'verification_token'>;
   token: string;
 }
+
+// Dummy export to ensure the file is treated as a module with value exports
+export const __esModule = true;
