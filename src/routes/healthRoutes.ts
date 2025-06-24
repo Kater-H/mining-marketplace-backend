@@ -1,7 +1,7 @@
 import express from 'express';
-import { HealthController } from '../controllers/healthController';
-import { protect, authorize } from '../middleware/authMiddleware';
-import { UserRole } from '../interfaces/user';
+import { HealthController } from '../controllers/healthController.ts';
+import { protect, authorize } from '../middleware/authMiddleware.ts';
+import { UserRole } from '../interfaces/user.ts';
 
 const router = express.Router();
 const healthController = new HealthController();
