@@ -8,15 +8,15 @@ import morgan from 'morgan';
 
 import * as path from 'path';
 
-import { healthRoutes } from './routes/healthRoutes';
+import { healthRoutes } from './src/routes/healthRoutes';
 
-import { marketplaceRoutes } from './routes/marketplaceRoutes';
+import { marketplaceRoutes } from './src/routes/marketplaceRoutes';
 
-import userRoutes from './routes/userRoutes';
+import userRoutes from './src/routes/userRoutes';
 
-import { paymentRoutes } from './routes/paymentRoutes';
+import { paymentRoutes } from './src/routes/paymentRoutes';
 
-import { config } from './config/config';
+import { config } from './src/config/config';
 
 
 
