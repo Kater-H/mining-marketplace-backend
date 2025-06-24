@@ -33,6 +33,7 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.15.4",
     "@types/stripe": "^8.0.416"
   }
 }
