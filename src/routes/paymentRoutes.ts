@@ -1,13 +1,13 @@
 import * as express from 'express';
-import { authorize } from '../middleware/authMiddleware';
-import { 
-  createStripePayment,
-  createFlutterwavePayment,
-  getTransactionById,
-  getUserTransactions,
-  handleStripeWebhook,
-  handleFlutterwaveWebhook
-} from '../controllers/paymentController';
+import { authorize } from '../middleware/authMiddleware.ts'; // <--- Add .ts here
+import { 
+  createStripePayment,
+  createFlutterwavePayment,
+  getTransactionById,
+  getUserTransactions,
+  handleStripeWebhook,
+  handleFlutterwaveWebhook
+} from '../controllers/paymentController.ts'; // <--- Add .ts here
 
 const router = express.Router();
 
