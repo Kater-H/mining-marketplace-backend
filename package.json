@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Mining Marketplace Backend API",
   "main": "src/app.ts",
+  "type": "module",
   "scripts": {
     "start": "ts-node src/app.ts",
     "dev": "ts-node src/app.ts"
