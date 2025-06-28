@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { healthCheck, readinessCheck, livenessCheck } from '../controllers/healthController'; // Removed .ts
+import { healthCheck, readinessCheck, livenessCheck } from '../controllers/healthController.js'; // Ensure .js is here
 
 const router = Router();
 

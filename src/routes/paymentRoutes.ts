@@ -6,8 +6,8 @@ import {
   handleFlutterwaveWebhook,
   getTransactionById,
   getUserTransactions
-} from '../controllers/paymentController'; // Removed .ts
-import { authenticate } from '../middleware/authMiddleware'; // Removed .ts
+} from '../controllers/paymentController.js'; // Ensure .js is here
+import { authenticate } from '../middleware/authMiddleware.js'; // Ensure .js is here
 
 const router = Router();
 

@@ -1,9 +1,9 @@
 // Import jsonwebtoken using require instead of import
-const jwt = require('jsonwebtoken');
-import * as bcrypt from 'bcryptjs';
-import { Pool } from 'pg';
-import { getPool } from '../config/database'; // Removed .ts
-import { config } from '../config/config'; // Removed .ts
+const jwt = require('jsonwebtoken'); // External module, no .js
+import * as bcrypt from 'bcryptjs'; // External module, no .js
+import { Pool } from 'pg'; // External module, no .js
+import { getPool } from '../config/database.js'; // Ensure .js is here
+import { config } from '../config/config.js'; // Ensure .js is here
 
 // User service class - export as default to ensure consistent import pattern
 class UserService {

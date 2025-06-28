@@ -5,8 +5,8 @@ import {
   loginUser,
   getUserProfile,
   updateUserProfile
-} from '../controllers/userController'; // Removed .ts
-import { authenticate } from '../middleware/authMiddleware'; // Removed .ts
+} from '../controllers/userController.js'; // Ensure .js is here
+import { authenticate } from '../middleware/authMiddleware.js'; // Ensure .js is here
 
 const router = Router();
 

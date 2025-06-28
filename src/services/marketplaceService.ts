@@ -1,11 +1,11 @@
-import { Pool } from 'pg';
-import { getPool } from '../config/database'; // Removed .ts
+import { Pool } from 'pg'; // External module, no .js
+import { getPool } from '../config/database.js'; // Ensure .js is here
 import {
   MineralListingData,
   ComplianceData,
   MineralListingFilter,
   MineralOffer
-} from '../models/interfaces/marketplace'; // Assuming this is '../models/interfaces/marketplace.ts', removed .ts
+} from '../models/interfaces/marketplace.js'; // Ensure .js is here
 
 // Marketplace service class
 export class MarketplaceService {

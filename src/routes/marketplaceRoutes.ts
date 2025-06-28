@@ -9,9 +9,9 @@ import {
   updateMineralOfferStatus,
   getOffersForListing,
   getOffersByBuyer,
-} from '../controllers/marketplaceController';
-import { authenticate, authorize } from '../middleware/authMiddleware';
-import { UserRole } from '../interfaces/user'; // Imports the type correctly
+} from '../controllers/marketplaceController.js'; // Ensure .js is here
+import { authenticate, authorize } from '../middleware/authMiddleware.js'; // Ensure .js is here
+import { UserRole } from '../interfaces/user.js'; // Ensure .js is here
 
 const router = Router();
 
@@ -22,16 +22,16 @@ router.get('/:id', getMineralListingById);
 // Authenticated routes
 router.use(authenticate); // Apply authentication to all routes below this point
 
-// Seller/Admin routes - Use string literals directly
-router.post('/listings', authorize('seller', 'admin'), createMineralListing); // CHANGED: Used string literals
-router.put('/listings/:id', authorize('seller', 'admin'), updateMineralListing); // CHANGED: Used string literals
-router.delete('/listings/:id', authorize('seller', 'admin'), deleteMineralListing); // CHANGED: Used string literals
+// Seller/Admin routes
+router.post('/listings', authorize('seller', 'admin'), createMineralListing);
+router.put('/listings/:id', authorize('seller', 'admin'), updateMineralListing);
+router.delete('/listings/:id', authorize('seller', 'admin'), deleteMineralListing);
 
 // Offer routes
-router.post('/offers', authorize('buyer'), createMineralOffer); // CHANGED: Used string literal
-router.put('/offers/:id/status', authorize('seller', 'admin'), updateMineralOfferStatus); // CHANGED: Used string literals
-router.get('/listings/:id/offers', authorize('seller', 'admin'), getOffersForListing); // CHANGED: Used string literals
-router.get('/offers/my-offers', authorize('buyer'), getOffersByBuyer); // CHANGED: Used string literal
+router.post('/offers', authorize('buyer'), createMineralOffer);
+router.put('/offers/:id/status', authorize('seller', 'admin'), updateMineralOfferStatus);
+router.get('/listings/:id/offers', authorize('seller', 'admin'), getOffersForListing);
+router.get('/offers/my-offers', authorize('buyer'), getOffersByBuyer);
 
 
 export const marketplaceRoutes = router;

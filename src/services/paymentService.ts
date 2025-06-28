@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import Flutterwave from 'flutterwave-node-v3';
-import { pgPool } from '../config/database';
-import { config } from '../config/config';
+import { pgPool } from '../config/database.js'; // Ensure .js is here
+import { config } from '../config/config.js'; // Ensure .js is here
 
 // Initialize payment providers
 const stripe = new Stripe(config.stripeSecretKey, {
@@ -138,9 +138,9 @@ export class PaymentService {
         },
       };
 
-      // CHANGED: Cast flutterwave to 'any' to bypass strict type checking for the 'initialize' method.
-      // This is a workaround due to type definition mismatch or unexpected API structure.
-      const response = await (flutterwave as any).initialize(payload);
+      // CHANGED: Using the top-level `initialize` method on the `flutterwave` instance.
+      // If this still fails, the last resort would be `(flutterwave as any).initialize(payload);`
+      const response = await flutterwave.initialize(payload);
 
       if (response.status !== 'success') {
         throw new Error('Failed to initialize Flutterwave payment');
