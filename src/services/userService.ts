@@ -1,5 +1,5 @@
-// Import jsonwebtoken using require instead of import
-const jwt = require('jsonwebtoken'); // External module, no .js
+// CHANGED: Import jsonwebtoken using import instead of require
+import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs'; // External module, no .js
 import { Pool } from 'pg'; // External module, no .js
 import { getPool } from '../config/database.js'; // Ensure .js is here
