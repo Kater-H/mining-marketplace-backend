@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { UserService } from '../services/userService'; // Removed .ts
-import { UserRegistrationData, UserLoginResponse, UserRole } from '../interfaces/user'; // Removed .ts
+import { UserService } from '../services/userService.js'; // ADDED .js
+import { UserRegistrationData, UserLoginResponse, UserRole } from '../interfaces/user.js'; // ADDED .js
 
 const userService = new UserService();
 

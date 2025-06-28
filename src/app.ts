@@ -1,15 +1,14 @@
-import 'dotenv/config'; // Loads environment variables from .env file
-import express, { Express, Request, Response, NextFunction } from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+import 'dotenv/config'; // External module, no .js
+import express, { Express, Request, Response, NextFunction } from 'express'; // External module, no .js
+import helmet from 'helmet'; // External module, no .js
+import cors from 'cors'; // External module, no .js
+import morgan from 'morgan'; // External module, no .js
+import rateLimit from 'express-rate-limit'; // External module, no .js
 
-// CONFIRM: Ensure no .ts extensions here in the source file
-import { healthRoutes } from './routes/healthRoutes';
-import { userRoutes } from './routes/userRoutes';
-import { marketplaceRoutes } from './routes/marketplaceRoutes';
-import { paymentRoutes } from './routes/paymentRoutes';
+import { healthRoutes } from './routes/healthRoutes.js'; // ADDED .js
+import { userRoutes } from './routes/userRoutes.js'; // ADDED .js
+import { marketplaceRoutes } from './routes/marketplaceRoutes.js'; // ADDED .js
+import { paymentRoutes } from './routes/paymentRoutes.js'; // ADDED .js
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;

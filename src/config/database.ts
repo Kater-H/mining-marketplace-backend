@@ -1,5 +1,5 @@
-import { Pool } from 'pg';
-import { config } from './config';
+import { Pool } from 'pg'; // External module, no .js
+import { config } from './config.js'; // ADDED .js
 
 let poolInstance: Pool;
 
@@ -14,8 +14,7 @@ export const getPool = (): Pool => {
       }
     });
 
-    // CHANGED: Cast to 'any' for the 'on' method to bypass strict type checking
-    (poolInstance as any).on('error', (err: Error) => { // Added type for 'err' for clarity
+    (poolInstance as any).on('error', (err: Error) => {
       console.error('Unexpected error on idle client', err);
       process.exit(-1);
     });

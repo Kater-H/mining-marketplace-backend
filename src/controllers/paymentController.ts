@@ -1,19 +1,9 @@
 import { Request, Response } from 'express';
-import { paymentService } from '../services/paymentService'; // Correct import for the service
+import { paymentService } from '../services/paymentService.js'; // ADDED .js
 import Stripe from 'stripe';
 
-// REMOVED: All these imports from '../controllers/paymentController' were circular/self-imports
-// import {
-//   createStripePaymentIntent,
-//   handleStripeWebhook,
-//   createFlutterwavePayment,
-//   handleFlutterwaveWebhook,
-//   getTransactionById,
-//   getUserTransactions
-// } from '../controllers/paymentController';
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2023-10-16' as Stripe.LatestApiVersion, // CHANGED: Asserting to a known valid type or 'latest'
+  apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
 });
 
 // Create Stripe Payment Intent

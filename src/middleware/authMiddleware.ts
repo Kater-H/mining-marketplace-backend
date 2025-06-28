@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express'; // Keep for types
-import * as jwt from 'jsonwebtoken';
-import { config } from '../config/config'; // Removed .ts
-import { UserRole } from '../interfaces/user'; // Removed .ts
+import { Request, Response, NextFunction } from 'express';
+import * as jwt from 'jsonwebtoken'; // External module, no .js
+import { config } from '../config/config.js'; // ADDED .js
+import { UserRole } from '../interfaces/user.js'; // ADDED .js
 
 // Interface for decoded token
 interface DecodedToken {
@@ -35,7 +35,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 1,
         email: 'test@example.com',
-        roles: ['seller', 'buyer'] // Use string literals for type UserRole
+        roles: ['seller', 'buyer']
       };
       next();
       return;
@@ -47,7 +47,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       (req as any).user = {
         id: 2,
         email: 'limited@example.com',
-        roles: ['buyer'] // Use string literal for type UserRole
+        roles: ['buyer']
       };
       next();
       return;
@@ -72,7 +72,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 export const protect = authenticate;
 
 // Middleware to check user roles
-export const authorize = (...roles: UserRole[]) => { // `roles` here still correctly infers UserRole type
+export const authorize = (...roles: UserRole[]) => {
   console.log('🔍 Creating authorize middleware for roles:', roles);
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
