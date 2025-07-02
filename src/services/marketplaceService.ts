@@ -1,11 +1,14 @@
-import { Pool } from 'pg'; // External module, no .js
-import { getPool } from '../config/database.js'; // Ensure .js is here
+import { Pool } from 'pg';
+import { getPool } from '../config/database.js';
 import {
   MineralListingData,
   ComplianceData,
   MineralListingFilter,
-  MineralOffer
-} from '../models/interfaces/marketplace.js'; // Ensure .js is here
+  MineralOffer,
+  Transaction, // Added for completeness
+  WebhookEvent // Added for completeness
+} from '../models/interfaces/marketplace.js'; // Import new interfaces
+import { config } from '../config/config.js'; // Import config for secret keys
 
 // Marketplace service class
 export class MarketplaceService {
@@ -64,12 +67,10 @@ export class MarketplaceService {
 
       return { listing_id: listingId };
     } catch (error) {
-      // Rollback transaction on error
       await client.query('ROLLBACK');
       console.error('Error creating mineral listing:', error);
       throw error;
     } finally {
-      // Release client
       client.release();
     }
   }
@@ -152,17 +153,21 @@ export class MarketplaceService {
   }
 
   // Update a mineral listing
-  async updateMineralListing(listingId: number, updateData: Partial<MineralListingData>, userId: number): Promise<any> {
+  // Added userRoles parameter to allow admin override
+  async updateMineralListing(listingId: number, updateData: Partial<MineralListingData>, userId: number, userRoles: string[]): Promise<any> {
     try {
-      // Check if listing exists and user owns it
+      // Check if listing exists
       const existingListing = await this.getMineralListingById(listingId);
       if (!existingListing) {
         throw new Error('Listing not found');
       }
 
-      // CHANGED: Check against existingListing.seller_id
-      if (existingListing.seller_id !== userId) {
-        throw new Error('Unauthorized: You can only update your own listings');
+      // Authorization check: User must be the seller OR an admin
+      const isOwner = existingListing.seller_id === userId;
+      const isAdmin = userRoles.includes('admin');
+
+      if (!isOwner && !isAdmin) { // <-- Combined check
+        throw new Error('Unauthorized: You can only update your own listings or as an admin');
       }
 
       // Build dynamic update query
@@ -225,35 +230,45 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error updating mineral listing:', error);
       throw error;
+    } finally { // Added finally block to ensure client is released
+      client.release();
     }
   }
 
   // Delete a mineral listing
-  async deleteMineralListing(listingId: number, userId: number): Promise<boolean> {
+  // Added userRoles parameter to allow admin override
+  async deleteMineralListing(listingId: number, userId: number, userRoles: string[]): Promise<boolean> {
+    const client = await this.pool.connect(); // Added client acquisition
     try {
-      // Check if listing exists and user owns it
+      // Check if listing exists
       const existingListing = await this.getMineralListingById(listingId);
       if (!existingListing) {
         throw new Error('Listing not found');
       }
 
-      // CHANGED: Check against existingListing.seller_id
-      if (existingListing.seller_id !== userId) {
-        throw new Error('Unauthorized: You can only delete your own listings');
+      // Authorization check: User must be the seller OR an admin
+      const isOwner = existingListing.seller_id === userId;
+      const isAdmin = userRoles.includes('admin');
+
+      if (!isOwner && !isAdmin) { // <-- Combined check
+        throw new Error('Unauthorized: You can only delete your own listings or as an admin');
       }
 
       // Delete the listing
-      const result = await this.pool.query('DELETE FROM mineral_listings WHERE id = $1', [listingId]);
+      const result = await client.query('DELETE FROM mineral_listings WHERE id = $1', [listingId]); // Used client
 
       return result.rowCount > 0;
     } catch (error) {
       console.error('Error deleting mineral listing:', error);
       throw error;
+    } finally { // Added finally block to ensure client is released
+      client.release();
     }
   }
 
   // Create a mineral offer
   async createMineralOffer(offerData: MineralOffer): Promise<{ offer_id: number }> {
+    const client = await this.pool.connect(); // Added client acquisition
     try {
       // Check if listing exists
       const listing = await this.getMineralListingById(offerData.listing_id);
@@ -269,7 +284,7 @@ export class MarketplaceService {
         RETURNING id;
       `;
 
-      const result = await this.pool.query(insertOfferQuery, [
+      const result = await client.query(insertOfferQuery, [ // Used client
         offerData.listing_id,
         offerData.buyer_id,
         offerData.offer_price,
@@ -284,11 +299,14 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error creating mineral offer:', error);
       throw error;
+    } finally { // Added finally block to ensure client is released
+      client.release();
     }
   }
 
   // Update offer status
   async updateOfferStatus(offerId: number, status: string): Promise<any> {
+    const client = await this.pool.connect(); // Added client acquisition
     try {
       const query = `
         UPDATE mineral_offers
@@ -297,7 +315,7 @@ export class MarketplaceService {
         RETURNING *
       `;
 
-      const result = await this.pool.query(query, [status, offerId]);
+      const result = await client.query(query, [status, offerId]); // Used client
 
       if (result.rows.length === 0) {
         throw new Error('Offer not found');
@@ -307,11 +325,14 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error updating offer status:', error);
       throw error;
+    } finally { // Added finally block to ensure client is released
+      client.release();
     }
   }
 
   // Get offers for a specific listing
   async getOffersForListing(listingId: number): Promise<any[]> {
+    const client = await this.pool.connect(); // Added client acquisition
     try {
       const query = `
         SELECT mo.*, u.first_name, u.last_name, u.email
@@ -321,16 +342,19 @@ export class MarketplaceService {
         ORDER BY mo.created_at DESC
       `;
 
-      const result = await this.pool.query(query, [listingId]);
+      const result = await client.query(query, [listingId]); // Used client
       return result.rows;
     } catch (error) {
       console.error('Error getting offers for listing:', error);
       throw error;
+    } finally { // Added finally block to ensure client is released
+      client.release();
     }
   }
 
   // Get offers by buyer
   async getOffersByBuyer(buyerId: number): Promise<any[]> {
+    const client = await this.pool.connect(); // Added client acquisition
     try {
       const query = `
         SELECT mo.*, ml.mineral_type, ml.quantity as listing_quantity, ml.price_per_unit as listing_price_per_unit
@@ -340,11 +364,13 @@ export class MarketplaceService {
         ORDER BY mo.created_at DESC
       `;
 
-      const result = await this.pool.query(query, [buyerId]);
+      const result = await client.query(query, [buyerId]); // Used client
       return result.rows;
     } catch (error) {
       console.error('Error getting offers by buyer:', error);
       throw error;
+    } finally { // Added finally block to ensure client is released
+      client.release();
     }
   }
 }

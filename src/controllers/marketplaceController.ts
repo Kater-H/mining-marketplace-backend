@@ -63,7 +63,7 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
   try {
     const listingId = parseInt(req.params.id);
     const userId = (req as any).user.id;
-    const userRoles = (req as any).user.roles;
+    const userRoles = (req as any).user.roles; // Get user roles
 
     const listing = await marketplaceService.getMineralListingById(listingId);
     if (!listing) {
@@ -71,16 +71,16 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    // CHANGED: Check against listing.seller_id
-    const isOwner = listing.seller_id === userId;
-    const isAdmin = userRoles.includes('admin');
+    // This check is now redundant here as it's moved to the service layer for consistency
+    // const isOwner = listing.seller_id === userId;
+    // const isAdmin = userRoles.includes('admin');
+    // if (!isOwner && !isAdmin) {
+    //   res.status(403).json({ message: 'Forbidden: You can only update your own listings or be an admin' });
+    //   return;
+    // }
 
-    if (!isOwner && !isAdmin) {
-      res.status(403).json({ message: 'Forbidden: You can only update your own listings or be an admin' });
-      return;
-    }
-
-    const updatedListing = await marketplaceService.updateMineralListing(listingId, req.body, userId);
+    // CHANGED: Pass userRoles to the service method
+    const updatedListing = await marketplaceService.updateMineralListing(listingId, req.body, userId, userRoles);
     res.status(200).json({ message: 'Mineral listing updated successfully', listing: updatedListing });
   } catch (error) {
     console.error('Error updating mineral listing:', error);
@@ -93,7 +93,7 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
   try {
     const listingId = parseInt(req.params.id);
     const userId = (req as any).user.id;
-    const userRoles = (req as any).user.roles;
+    const userRoles = (req as any).user.roles; // Get user roles
 
     const listing = await marketplaceService.getMineralListingById(listingId);
     if (!listing) {
@@ -101,16 +101,16 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    // CHANGED: Check against listing.seller_id
-    const isOwner = listing.seller_id === userId;
-    const isAdmin = userRoles.includes('admin');
+    // This check is now redundant here as it's moved to the service layer for consistency
+    // const isOwner = listing.seller_id === userId;
+    // const isAdmin = userRoles.includes('admin');
+    // if (!isOwner && !isAdmin) {
+    //   res.status(403).json({ message: 'Forbidden: You can only delete your own listings or be an admin' });
+    //   return;
+    // }
 
-    if (!isOwner && !isAdmin) {
-      res.status(403).json({ message: 'Forbidden: You can only delete your own listings or be an admin' });
-      return;
-    }
-
-    const success = await marketplaceService.deleteMineralListing(listingId, userId);
+    // CHANGED: Pass userRoles to the service method
+    const success = await marketplaceService.deleteMineralListing(listingId, userId, userRoles);
     if (success) {
       res.status(204).send(); // No content for successful deletion
     } else {
@@ -197,11 +197,6 @@ export const getOffersByBuyer = async (req: Request, res: Response): Promise<voi
     // it returns their own offers, or if a buyer tries to view someone else's by ID (not this route)
     // it would be forbidden. For /my-offers, this check effectively ensures the user
     // is who they say they are (which auth middleware already handles) or an admin.
-    // The previous logic was comparing req.params.id (which is undefined here) to userId.
-    const isAdmin = userRoles.includes('admin');
-
-    // If it's not an admin, we assume they are a buyer looking for their own offers.
-    // The `authorize('buyer')` middleware already ensures they are a buyer.
     // No need for `isOwner` check here, as `buyerId` is already the authenticated user's ID.
     // If you wanted to allow admins to view *any* buyer's offers by ID, you'd need a different route like /offers/:buyerId
     // For /my-offers, the `buyerId` is always the authenticated user's ID.
