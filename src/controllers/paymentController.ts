@@ -109,7 +109,9 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
  */
 export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
   const provider = req.params.provider as 'stripe' | 'flutterwave'; // 'stripe' or 'flutterwave'
-  const signature = req.headers['stripe-signature'] || req.headers['x-flw-signature'] as string; // Adjust header name based on provider
+  // FIX: Ensure signature is always a string. Headers can be string | string[]
+  const signatureHeader = req.headers['stripe-signature'] || req.headers['x-flw-signature'];
+  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader; // Take first if array, else use as is
   const rawBody = (req as any).rawBody; // Ensure you have a raw body parser middleware before this!
 
   if (!signature || !rawBody) {
