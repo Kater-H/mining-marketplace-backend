@@ -169,7 +169,6 @@ export const getOffersForListing = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // CHANGED: Check against listing.seller_id
     const isOwner = listing.seller_id === userId;
     const isAdmin = userRoles.includes('admin');
 
@@ -189,18 +188,23 @@ export const getOffersForListing = async (req: Request, res: Response): Promise<
 // Get offers made by a specific buyer
 export const getOffersByBuyer = async (req: Request, res: Response): Promise<void> => {
   try {
-    const buyerId = parseInt(req.params.id); // Or (req as any).user.id if always current user
-    const userId = (req as any).user.id;
+    // CHANGED: Directly use userId from authenticated token for 'my-offers' route
+    const buyerId = (req as any).user.id;
     const userRoles = (req as any).user.roles;
 
-    // A user can only view their own offers unless they are an admin
-    const isOwner = buyerId === userId;
+    // The authorization middleware already checks for 'buyer' role.
+    // This additional check ensures that if an admin tries to view 'my-offers'
+    // it returns their own offers, or if a buyer tries to view someone else's by ID (not this route)
+    // it would be forbidden. For /my-offers, this check effectively ensures the user
+    // is who they say they are (which auth middleware already handles) or an admin.
+    // The previous logic was comparing req.params.id (which is undefined here) to userId.
     const isAdmin = userRoles.includes('admin');
 
-    if (!isOwner && !isAdmin) {
-      res.status(403).json({ message: 'Forbidden: You can only view your own offers or as an admin' });
-      return;
-    }
+    // If it's not an admin, we assume they are a buyer looking for their own offers.
+    // The `authorize('buyer')` middleware already ensures they are a buyer.
+    // No need for `isOwner` check here, as `buyerId` is already the authenticated user's ID.
+    // If you wanted to allow admins to view *any* buyer's offers by ID, you'd need a different route like /offers/:buyerId
+    // For /my-offers, the `buyerId` is always the authenticated user's ID.
 
     const offers = await marketplaceService.getOffersByBuyer(buyerId);
     res.status(200).json(offers);
