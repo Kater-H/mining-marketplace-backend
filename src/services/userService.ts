@@ -1,7 +1,6 @@
-// CHANGED: Import jsonwebtoken using import instead of require
-import * as jwt from 'jsonwebtoken';
-// CHANGED: Import bcryptjs as a default import for ES Modules compatibility
-import bcrypt from 'bcryptjs'; // Changed from * as bcrypt
+// CHANGED: Import jsonwebtoken as a default import for ES Modules compatibility
+import jwt from 'jsonwebtoken'; // Changed from * as jwt
+import bcrypt from 'bcryptjs'; // External module, no .js
 import { Pool } from 'pg'; // External module, no .js
 import { getPool } from '../config/database.js'; // Ensure .js is here
 import { config } from '../config/config.js'; // Ensure .js is here
@@ -35,7 +34,7 @@ class UserService {
       const hashedPassword = await bcrypt.hash(userData.password, salt);
 
       // Generate verification token
-      const verificationToken = jwt.sign(
+      const verificationToken = jwt.sign( // This is the line that was causing the error
         { email: userData.email },
         config.jwtSecret,
         { expiresIn: '24h' }
@@ -53,8 +52,8 @@ class UserService {
       const role = userData.role || 'buyer'; // Default role is buyer
 
       const userResult = await this.pool.query(insertUserQuery, [
-        userData.firstName, // Corrected from userData.first_name to match request body
-        userData.lastName,  // Corrected from userData.last_name to match request body
+        userData.firstName,
+        userData.lastName,
         userData.email,
         hashedPassword,
         role,
@@ -137,8 +136,8 @@ class UserService {
         throw new Error('Invalid credentials');
       }
 
-      // Generate JWT token - using require style import to avoid TypeScript issues
-      const token = jwt.sign(
+      // Generate JWT token
+      const token = jwt.sign( // This is also using jwt.sign
         {
           id: user.id,
           email: user.email,
@@ -218,12 +217,12 @@ class UserService {
       // Build dynamic update query
       const updateFields: string[] = [];
 
-      if (userData.firstName) { // Corrected from userData.first_name
+      if (userData.firstName) {
         updateFields.push(`first_name = $${paramIndex++}`);
         queryParams.push(userData.firstName);
       }
 
-      if (userData.lastName) { // Corrected from userData.last_name
+      if (userData.lastName) {
         updateFields.push(`last_name = $${paramIndex++}`);
         queryParams.push(userData.lastName);
       }
@@ -250,12 +249,12 @@ class UserService {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(userData.password, salt);
 
-        updateFields.push(`password_hash = $${paramIndex++}`); // Corrected column name to password_hash
+        updateFields.push(`password_hash = $${paramIndex++}`);
         queryParams.push(hashedPassword);
       }
 
-      if (userData.role) { // Corrected from userData.roles (singular for a single user's role)
-        updateFields.push(`role = $${paramIndex++}`); // Corrected column name to role
+      if (userData.role) {
+        updateFields.push(`role = $${paramIndex++}`);
         queryParams.push(userData.role);
       }
 
@@ -272,7 +271,7 @@ class UserService {
       updateQuery += ` WHERE id = $${paramIndex++}`;
       queryParams.push(id);
 
-      updateQuery += ' RETURNING id, first_name, last_name, email, role'; // Corrected column name to role
+      updateQuery += ' RETURNING id, first_name, last_name, email, role';
 
       // Execute update
       const result = await this.pool.query(updateQuery, queryParams);
