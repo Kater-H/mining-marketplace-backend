@@ -2,12 +2,18 @@ import { Pool } from 'pg';
 import { getPool } from '../config/database.js';
 import { Transaction, WebhookEvent } from '../models/interfaces/marketplace.js'; // Import new interfaces
 import { config } from '../config/config.js'; // Import config for secret keys
+import Stripe from 'stripe'; // Import Stripe SDK
+import crypto from 'crypto'; // For Flutterwave, but generally useful for hashing
 
-// Assume you have Stripe and Flutterwave SDKs installed and initialized
-// import Stripe from 'stripe';
-// const stripe = new Stripe(config.stripeSecretKey, { apiVersion: '2022-11-15' }); // Use your Stripe API version
+// Initialize Stripe with your secret key and API version
+const stripe = new Stripe(config.stripeSecretKey, {
+  apiVersion: '2022-11-15', // Use the API version from your Stripe dashboard
+});
+
+// If you plan to use Flutterwave, uncomment and initialize here
 // import Flutterwave from 'flutterwave-node-v3';
 // const flw = new Flutterwave(config.flutterwavePublicKey, config.flutterwaveSecretKey);
+
 
 export class PaymentService {
   private pool: Pool;
@@ -52,6 +58,8 @@ export class PaymentService {
       const transactionId = result.rows[0].id;
 
       // Update offer status to 'accepted' or 'completed' if an offer_id is present
+      // This logic might need refinement based on when you consider an offer 'accepted' vs 'completed'
+      // For now, we'll mark it accepted when a transaction is initiated
       if (transactionData.offer_id) {
         await client.query(
           `UPDATE mineral_offers SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
@@ -60,9 +68,10 @@ export class PaymentService {
       }
 
       // Potentially update listing status to 'pending' or 'sold'
+      // Mark listing as 'pending' to indicate it's under transaction
       await client.query(
         `UPDATE mineral_listings SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-        ['pending', transactionData.listing_id] // Or 'sold' if payment is guaranteed
+        ['pending', transactionData.listing_id]
       );
 
 
@@ -83,13 +92,16 @@ export class PaymentService {
    * @returns The transaction data or null if not found.
    */
   async getTransactionById(transactionId: number): Promise<Transaction | null> {
+    const client = await this.pool.connect();
     try {
       const query = `SELECT * FROM transactions WHERE id = $1`;
-      const result = await this.pool.query(query, [transactionId]);
+      const result = await client.query(query, [transactionId]);
       return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
       console.error('Error getting transaction by ID:', error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -179,13 +191,14 @@ export class PaymentService {
    * @returns The ID of the stored webhook event.
    */
   async storeWebhookEvent(eventData: WebhookEvent): Promise<{ webhook_event_id: number }> {
+    const client = await this.pool.connect();
     try {
       const insertQuery = `
         INSERT INTO webhook_events (event_id, event_type, payload, processed)
         VALUES ($1, $2, $3, $4)
         RETURNING id;
       `;
-      const result = await this.pool.query(insertQuery, [
+      const result = await client.query(insertQuery, [
         eventData.event_id,
         eventData.event_type,
         eventData.payload, // JSONB column accepts JS object directly
@@ -195,6 +208,8 @@ export class PaymentService {
     } catch (error) {
       console.error('Error storing webhook event:', error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -206,30 +221,27 @@ export class PaymentService {
    * @param provider The payment provider ('stripe' or 'flutterwave').
    */
   async handleWebhookEvent(rawBody: string, signature: string, provider: 'stripe' | 'flutterwave'): Promise<void> {
-    // IMPORTANT: Implement webhook signature verification first!
-    // This protects against forged webhook events.
     try {
-      let event;
+      let event: Stripe.Event | any; // Type for Stripe event, or any for Flutterwave/placeholder
 
       if (provider === 'stripe') {
-        // Example Stripe webhook verification (requires stripe-signature header)
-        // try {
-        //   event = stripe.webhooks.constructEvent(rawBody, signature, config.stripeWebhookSecret);
-        // } catch (err) {
-        //   console.error(`⚠️ Webhook Error: Invalid Stripe signature.`, err.message);
-        //   throw new Error('Invalid webhook signature');
-        // }
-        console.log(`Stripe webhook received: ${JSON.stringify(JSON.parse(rawBody).type)}`);
-        event = JSON.parse(rawBody); // For testing without full verification
-
+        // Stripe webhook verification (requires stripe-signature header)
+        try {
+          // IMPORTANT: Use your actual Stripe webhook secret from config
+          event = stripe.webhooks.constructEvent(rawBody, signature, config.stripeWebhookSecret);
+          console.log(`Stripe webhook verified and received: ${event.type}`);
+        } catch (err: any) {
+          console.error(`⚠️ Webhook Error: Invalid Stripe signature or event parsing failed.`, err.message);
+          throw new Error('Invalid webhook signature or event');
+        }
       } else if (provider === 'flutterwave') {
-        // Example Flutterwave webhook verification (requires x-flw-signature header)
-        // const hash = crypto.createHmac('sha512', config.flutterwaveSecretKey).update(rawBody).digest('hex');
+        // Flutterwave webhook verification (requires x-flw-signature header)
+        // const hash = crypto.createHmac('sha512', config.flutterwaveWebhookSecret).update(rawBody).digest('hex');
         // if (hash !== signature) {
         //   console.error(`⚠️ Webhook Error: Invalid Flutterwave signature.`);
         //   throw new Error('Invalid webhook signature');
         // }
-        console.log(`Flutterwave webhook received: ${JSON.stringify(JSON.parse(rawBody).event)}`);
+        console.log(`Flutterwave webhook received (verification skipped for now): ${JSON.parse(rawBody).event}`);
         event = JSON.parse(rawBody); // For testing without full verification
       } else {
         throw new Error('Unsupported webhook provider');
@@ -244,44 +256,87 @@ export class PaymentService {
       });
 
       // Process the event based on its type
-      switch (event.type || event.event) { // Use event.type for Stripe, event.event for Flutterwave
-        case 'checkout.session.completed': // Stripe example
-        case 'charge.succeeded': // Stripe example
-        case 'payment.success': // Flutterwave example
-          console.log(`Processing successful payment event: ${event.id || event.data?.id}`);
-          // Extract transaction details from the event payload
-          const transactionIdFromPayment = event.data?.metadata?.transaction_id || event.data?.tx_ref; // Adjust based on how you link
-          const paymentGatewayId = event.data?.id || event.id; // Stripe charge ID or Flutterwave transaction ID
+      switch (event.type) { // Use event.type for Stripe events
+        case 'checkout.session.completed':
+          console.log(`Processing Stripe checkout.session.completed event: ${event.id}`);
+          const session = event.data.object as Stripe.Checkout.Session;
+          const transactionIdFromMetadata = session.metadata?.transaction_id;
 
-          if (transactionIdFromPayment) {
+          if (transactionIdFromMetadata) {
             await this.updateTransactionStatus(
-              parseInt(transactionIdFromPayment), // Ensure it's a number
+              parseInt(transactionIdFromMetadata),
               'completed',
-              paymentGatewayId
+              session.payment_intent as string || session.id // Use payment_intent ID if available, else session ID
             );
-            console.log(`Transaction ${transactionIdFromPayment} marked as completed.`);
+            console.log(`Transaction ${transactionIdFromMetadata} marked as completed via checkout session.`);
           } else {
-            console.warn('Could not find transaction ID in webhook payload for completion.');
+            console.warn('Could not find transaction ID in Stripe Checkout Session metadata for completion.');
           }
           break;
 
-        case 'charge.failed': // Stripe example
-        case 'payment.failed': // Flutterwave example
-          console.log(`Processing failed payment event: ${event.id || event.data?.id}`);
-          const failedTransactionId = event.data?.metadata?.transaction_id || event.data?.tx_ref;
+        case 'charge.succeeded':
+          console.log(`Processing Stripe charge.succeeded event: ${event.id}`);
+          const charge = event.data.object as Stripe.Charge;
+          const transactionIdFromChargeMetadata = charge.metadata?.transaction_id;
+
+          if (transactionIdFromChargeMetadata) {
+            await this.updateTransactionStatus(
+              parseInt(transactionIdFromChargeMetadata),
+              'completed',
+              charge.id
+            );
+            console.log(`Transaction ${transactionIdFromChargeMetadata} marked as completed via charge.`);
+          } else {
+            console.warn('Could not find transaction ID in Stripe Charge metadata for completion.');
+          }
+          break;
+
+        case 'charge.failed':
+          console.log(`Processing Stripe charge.failed event: ${event.id}`);
+          const failedCharge = event.data.object as Stripe.Charge;
+          const failedTransactionId = failedCharge.metadata?.transaction_id;
+
           if (failedTransactionId) {
             await this.updateTransactionStatus(
               parseInt(failedTransactionId),
               'failed',
-              event.data?.id || event.id
+              failedCharge.id
             );
             console.log(`Transaction ${failedTransactionId} marked as failed.`);
           }
           break;
 
-        // Add more cases for other event types (e.g., refund, subscription events)
+        case 'charge.refunded':
+          console.log(`Processing Stripe charge.refunded event: ${event.id}`);
+          const refundedCharge = event.data.object as Stripe.Charge;
+          const refundedTransactionId = refundedCharge.metadata?.transaction_id;
+
+          if (refundedTransactionId) {
+            await this.updateTransactionStatus(
+              parseInt(refundedTransactionId),
+              'refunded',
+              refundedCharge.id
+            );
+            console.log(`Transaction ${refundedTransactionId} marked as refunded.`);
+          }
+          break;
+
+        // Add cases for Flutterwave events if you enable it
+        // case 'payment.success': // Flutterwave example
+        //   console.log(`Processing Flutterwave successful payment event: ${event.data.id}`);
+        //   const flwTransactionId = event.data.meta?.transaction_id || event.data.tx_ref;
+        //   if (flwTransactionId) {
+        //     await this.updateTransactionStatus(
+        //       parseInt(flwTransactionId),
+        //       'completed',
+        //       event.data.id // Flutterwave transaction ID
+        //     );
+        //     console.log(`Transaction ${flwTransactionId} marked as completed via Flutterwave.`);
+        //   }
+        //   break;
+
         default:
-          console.log(`Unhandled webhook event type: ${event.type || event.event}`);
+          console.log(`Unhandled webhook event type: ${event.type}`);
           break;
       }
     } catch (error) {

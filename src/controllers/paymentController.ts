@@ -1,22 +1,29 @@
 import { Request, Response } from 'express';
 import { PaymentService } from '../services/paymentService.js'; // Ensure .js is here
 import { Transaction } from '../models/interfaces/marketplace.js'; // Import Transaction interface
+import { config } from '../config/config.js'; // Import config for frontendUrl
+import Stripe from 'stripe'; // Import Stripe SDK
+
+// Initialize Stripe with your secret key and API version
+const stripe = new Stripe(config.stripeSecretKey, {
+  apiVersion: '2022-11-15', // Use the API version from your Stripe dashboard
+});
 
 const paymentService = new PaymentService();
 
 /**
  * Initiates a payment process and creates a pending transaction.
  * This would typically involve calling a payment gateway SDK to get a checkout URL or client secret.
- * @param req Request object (expects listing_id, offer_id, final_price, final_quantity, currency in body)
+ * @param req Request object (expects listing_id, offer_id, final_price, final_quantity, currency, seller_id in body)
  * @param res Response object
  */
 export const createPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { listing_id, offer_id, final_price, final_quantity, currency, seller_id } = req.body;
+    const { listing_id, offer_id, final_price, final_quantity, currency, seller_id, mineralType } = req.body;
     const buyer_id = (req as any).user.id; // Get buyer ID from authenticated user
 
     // Basic validation
-    if (!listing_id || !buyer_id || !seller_id || !final_price || !final_quantity || !currency) {
+    if (!listing_id || !buyer_id || !seller_id || !final_price || !final_quantity || !currency || !mineralType) {
       res.status(400).json({ message: 'Missing required transaction details' });
       return;
     }
@@ -37,30 +44,34 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     const { transaction_id } = await paymentService.createTransaction(transactionData);
 
     // --- INTEGRATE WITH PAYMENT GATEWAY HERE ---
-    // Example (Stripe Checkout Session):
-    // const session = await stripe.checkout.sessions.create({
-    //   payment_method_types: ['card'],
-    //   line_items: [{
-    //     price_data: {
-    //       currency: currency,
-    //       product_data: {
-    //         name: `Mineral Listing ${listing_id}`,
-    //       },
-    //       unit_amount: final_price * 100, // Stripe expects cents
-    //     },
-    //     quantity: final_quantity,
-    //   }],
-    //   mode: 'payment',
-    //   success_url: `${config.frontendUrl}/success?transaction_id=${transaction_id}`,
-    //   cancel_url: `${config.frontendUrl}/cancel?transaction_id=${transaction_id}`,
-    //   metadata: {
-    //     transaction_id: transaction_id, // Link your internal transaction ID to Stripe
-    //     listing_id: listing_id,
-    //     buyer_id: buyer_id,
-    //   },
-    // });
+    // Stripe Checkout Session:
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: currency,
+          product_data: {
+            name: `Mineral Listing: ${mineralType} (ID: ${listing_id})`, // Dynamic product name
+          },
+          unit_amount: Math.round(final_price * 100), // Stripe expects cents, rounded to integer
+        },
+        quantity: final_quantity,
+      }],
+      mode: 'payment',
+      success_url: `${config.frontendUrl}/success?transaction_id=${transaction_id}`,
+      cancel_url: `${config.frontendUrl}/cancel?transaction_id=${transaction_id}`,
+      metadata: {
+        transaction_id: transaction_id.toString(), // Link your internal transaction ID to Stripe
+        listing_id: listing_id.toString(),
+        buyer_id: buyer_id.toString(),
+        seller_id: seller_id.toString(),
+        offer_id: offer_id ? offer_id.toString() : ''
+      },
+    });
 
-    // Example (Flutterwave Inline Payment):
+    res.status(200).json({ message: 'Payment initiated', checkout_url: session.url, transaction_id });
+
+    // Example (Flutterwave Inline Payment) - keep commented unless fully implementing
     // const payload = {
     //   tx_ref: `TX-${Date.now()}-${transaction_id}`, // Unique transaction reference
     //   amount: final_price * final_quantity,
@@ -88,12 +99,6 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     //   throw new Error('Failed to initiate Flutterwave payment');
     // }
 
-    // For now, return a success message assuming payment gateway integration would follow
-    res.status(201).json({
-      message: 'Transaction initiated and pending record created. Payment gateway integration placeholder.',
-      transaction_id
-    });
-
   } catch (error) {
     console.error('Error creating payment/transaction:', error);
     res.status(500).json({ message: 'Failed to create payment/transaction', error: (error as Error).message });
@@ -111,7 +116,7 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
   const provider = req.params.provider as 'stripe' | 'flutterwave'; // 'stripe' or 'flutterwave'
   // FIX: Ensure signature is always a string. Headers can be string | string[]
   const signatureHeader = req.headers['stripe-signature'] || req.headers['x-flw-signature'];
-  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader; // Take first if array, else use as is
+  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader || ''; // Default to empty string if null/undefined
   const rawBody = (req as any).rawBody; // Ensure you have a raw body parser middleware before this!
 
   if (!signature || !rawBody) {
