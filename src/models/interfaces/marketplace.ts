@@ -69,3 +69,36 @@ export interface MineralOffer {
   message?: string;
   expiry_date?: Date;
 }
+
+/**
+ * Interface for Transaction data
+ * Reflects the 'transactions' table schema.
+ */
+export interface Transaction {
+  id?: number; // Optional as it's SERIAL PRIMARY KEY
+  listing_id: number;
+  buyer_id: number;
+  seller_id: number;
+  offer_id?: number | null; // Optional, can be null if no offer was involved
+  final_price: number;
+  final_quantity: number;
+  currency: string;
+  transaction_date?: Date; // Optional, defaults to CURRENT_TIMESTAMP
+  status?: 'completed' | 'pending' | 'failed' | 'refunded'; // Default 'completed'
+  payment_gateway_id?: string | null; // Optional, can be null
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+/**
+ * Interface for Webhook Event data
+ * Reflects the 'webhook_events' table schema.
+ */
+export interface WebhookEvent {
+  id?: number; // Optional as it's SERIAL PRIMARY KEY
+  event_id: string; // Unique ID from the webhook provider
+  event_type: string; // e.g., 'charge.succeeded', 'payment.failed'
+  payload: any; // Store the full JSON payload (JSONB in DB)
+  processed?: boolean; // Default FALSE
+  created_at?: Date;
+}
