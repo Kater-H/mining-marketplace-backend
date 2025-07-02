@@ -24,8 +24,7 @@ export class MarketplaceService {
     listingData: MineralListingData,
     complianceData?: ComplianceData
   ): Promise<{ listing_id: number }> {
-    const client = await this.pool.connect();
-
+    const client = await this.pool.connect(); // Client acquired
     try {
       // Begin transaction
       await client.query('BEGIN');
@@ -71,12 +70,13 @@ export class MarketplaceService {
       console.error('Error creating mineral listing:', error);
       throw error;
     } finally {
-      client.release();
+      client.release(); // Client released
     }
   }
 
   // Get mineral listings with optional filters
   async getMineralListings(filters?: MineralListingFilter): Promise<any[]> {
+    const client = await this.pool.connect(); // Client acquired
     try {
       let query = `
         SELECT * FROM mineral_listings
@@ -128,33 +128,39 @@ export class MarketplaceService {
         queryParams.push(offset);
       }
 
-      const result = await this.pool.query(query, queryParams);
+      const result = await client.query(query, queryParams); // Used client
       return result.rows;
     } catch (error) {
       console.error('Error getting mineral listings:', error);
       throw error;
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Get a specific mineral listing by ID
   async getMineralListingById(listingId: number): Promise<any | null> {
+    const client = await this.pool.connect(); // Client acquired
     try {
       const query = `
         SELECT * FROM mineral_listings
         WHERE id = $1
       `;
 
-      const result = await this.pool.query(query, [listingId]);
+      const result = await client.query(query, [listingId]); // Used client
       return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
       console.error('Error getting mineral listing by ID:', error);
       throw error;
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Update a mineral listing
   // Added userRoles parameter to allow admin override
   async updateMineralListing(listingId: number, updateData: Partial<MineralListingData>, userId: number, userRoles: string[]): Promise<any> {
+    const client = await this.pool.connect(); // Client acquired
     try {
       // Check if listing exists
       const existingListing = await this.getMineralListingById(listingId);
@@ -225,20 +231,20 @@ export class MarketplaceService {
       `;
       queryParams.push(listingId);
 
-      const result = await this.pool.query(query, queryParams);
+      const result = await client.query(query, queryParams);
       return result.rows[0];
     } catch (error) {
       console.error('Error updating mineral listing:', error);
       throw error;
-    } finally { // Added finally block to ensure client is released
-      client.release();
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Delete a mineral listing
   // Added userRoles parameter to allow admin override
   async deleteMineralListing(listingId: number, userId: number, userRoles: string[]): Promise<boolean> {
-    const client = await this.pool.connect(); // Added client acquisition
+    const client = await this.pool.connect(); // Client acquired
     try {
       // Check if listing exists
       const existingListing = await this.getMineralListingById(listingId);
@@ -261,14 +267,14 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error deleting mineral listing:', error);
       throw error;
-    } finally { // Added finally block to ensure client is released
-      client.release();
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Create a mineral offer
   async createMineralOffer(offerData: MineralOffer): Promise<{ offer_id: number }> {
-    const client = await this.pool.connect(); // Added client acquisition
+    const client = await this.pool.connect(); // Client acquired
     try {
       // Check if listing exists
       const listing = await this.getMineralListingById(offerData.listing_id);
@@ -299,14 +305,14 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error creating mineral offer:', error);
       throw error;
-    } finally { // Added finally block to ensure client is released
-      client.release();
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Update offer status
   async updateOfferStatus(offerId: number, status: string): Promise<any> {
-    const client = await this.pool.connect(); // Added client acquisition
+    const client = await this.pool.connect(); // Client acquired
     try {
       const query = `
         UPDATE mineral_offers
@@ -325,14 +331,14 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error updating offer status:', error);
       throw error;
-    } finally { // Added finally block to ensure client is released
-      client.release();
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Get offers for a specific listing
   async getOffersForListing(listingId: number): Promise<any[]> {
-    const client = await this.pool.connect(); // Added client acquisition
+    const client = await this.pool.connect(); // Client acquired
     try {
       const query = `
         SELECT mo.*, u.first_name, u.last_name, u.email
@@ -347,14 +353,14 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error getting offers for listing:', error);
       throw error;
-    } finally { // Added finally block to ensure client is released
-      client.release();
+    } finally {
+      client.release(); // Client released
     }
   }
 
   // Get offers by buyer
   async getOffersByBuyer(buyerId: number): Promise<any[]> {
-    const client = await this.pool.connect(); // Added client acquisition
+    const client = await this.pool.connect(); // Client acquired
     try {
       const query = `
         SELECT mo.*, ml.mineral_type, ml.quantity as listing_quantity, ml.price_per_unit as listing_price_per_unit
@@ -369,8 +375,8 @@ export class MarketplaceService {
     } catch (error) {
       console.error('Error getting offers by buyer:', error);
       throw error;
-    } finally { // Added finally block to ensure client is released
-      client.release();
+    } finally {
+      client.release(); // Client released
     }
   }
 }
