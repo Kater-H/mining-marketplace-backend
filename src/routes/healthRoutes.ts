@@ -3,6 +3,9 @@ import { healthCheck, readinessCheck, livenessCheck } from '../controllers/healt
 
 const router = Router();
 
+// ADDED: A basic health check for the root of the /api/health path
+router.get('/', healthCheck); // This will make GET /api/health work
+
 router.get('/status', healthCheck);
 router.get('/ready', readinessCheck);
 router.get('/live', livenessCheck);
