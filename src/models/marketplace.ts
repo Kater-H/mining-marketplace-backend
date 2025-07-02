@@ -2,22 +2,29 @@
 
 /**
  * Interface for mineral listing data
+ * This interface reflects the data structure as it comes from the request body (camelCase)
+ * and maps to the database columns (snake_case where appropriate).
  */
 export interface MineralListingData {
-  user_id: number;
-  commodity_type: string;
-  volume: number;
-  grade: string;
-  origin_location: string;
-  price_per_unit: number;
+  seller_id: number; // Changed from user_id to match DB column and controller
+  mineralType: string; // Changed from commodity_type to match incoming JSON
+  quantity: number; // Changed from volume to match incoming JSON
+  unit: string; // Added to match DB column (NOT NULL)
+  location: string; // Changed from origin_location to match incoming JSON
+  pricePerUnit: number; // Changed from price_per_unit to match incoming JSON
   currency: string;
-  available: boolean;
+  status: 'available' | 'pending' | 'sold' | 'canceled'; // Changed from 'available' boolean to 'status' string
   description?: string;
   images?: string[];
+  // Removed 'grade' and 'available' as they are not in the current mineral_listings table schema.
+  // If you add them to the DB, uncomment/add them here.
+  // grade?: string;
+  // available?: boolean;
 }
 
 /**
  * Interface for compliance data
+ * (No changes needed based on current errors, but keeping for completeness)
  */
 export interface ComplianceData {
   certification_type: string;
@@ -30,17 +37,19 @@ export interface ComplianceData {
 
 /**
  * Interface for mineral listing filters
+ * These reflect the query parameters and database column names for filtering.
  */
 export interface MineralListingFilter {
-  commodity_type?: string;
+  mineral_type?: string; // Changed from commodity_type to match DB column
   min_price?: number;
   max_price?: number;
-  min_volume?: number;
-  max_volume?: number;
-  origin_location?: string;
+  min_quantity?: number; // Changed from min_volume
+  max_quantity?: number; // Changed from max_volume
+  location?: string; // Changed from origin_location to match DB column
   min_compliance_score?: number;
-  available_only?: boolean;
-  verified_only?: boolean;
+  status?: 'available' | 'pending' | 'sold' | 'canceled'; // Added status filter
+  // Removed 'available_only' as 'status' is now used
+  // verified_only?: boolean; // Keep if you have a 'verified' column or logic
   sort_by?: string;
   sort_direction?: 'asc' | 'desc';
   page?: number;
@@ -55,7 +64,7 @@ export interface MineralOffer {
   buyer_id: number;
   offer_price: number;
   currency: string;
-  volume: number;
+  offer_quantity: number; // Changed from volume to match DB column
   status: 'pending' | 'accepted' | 'rejected' | 'expired';
   message?: string;
   expiry_date?: Date;
