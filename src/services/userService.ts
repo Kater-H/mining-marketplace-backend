@@ -1,6 +1,7 @@
 // CHANGED: Import jsonwebtoken using import instead of require
 import * as jwt from 'jsonwebtoken';
-import * as bcrypt from 'bcryptjs'; // External module, no .js
+// CHANGED: Import bcryptjs as a default import for ES Modules compatibility
+import bcrypt from 'bcryptjs'; // Changed from * as bcrypt
 import { Pool } from 'pg'; // External module, no .js
 import { getPool } from '../config/database.js'; // Ensure .js is here
 import { config } from '../config/config.js'; // Ensure .js is here
@@ -52,8 +53,8 @@ class UserService {
       const role = userData.role || 'buyer'; // Default role is buyer
 
       const userResult = await this.pool.query(insertUserQuery, [
-        userData.first_name,
-        userData.last_name,
+        userData.firstName, // Corrected from userData.first_name to match request body
+        userData.lastName,  // Corrected from userData.last_name to match request body
         userData.email,
         hashedPassword,
         role,
@@ -217,14 +218,14 @@ class UserService {
       // Build dynamic update query
       const updateFields: string[] = [];
 
-      if (userData.first_name) {
+      if (userData.firstName) { // Corrected from userData.first_name
         updateFields.push(`first_name = $${paramIndex++}`);
-        queryParams.push(userData.first_name);
+        queryParams.push(userData.firstName);
       }
 
-      if (userData.last_name) {
+      if (userData.lastName) { // Corrected from userData.last_name
         updateFields.push(`last_name = $${paramIndex++}`);
-        queryParams.push(userData.last_name);
+        queryParams.push(userData.lastName);
       }
 
       if (userData.email) {
@@ -249,13 +250,13 @@ class UserService {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(userData.password, salt);
 
-        updateFields.push(`password = $${paramIndex++}`);
+        updateFields.push(`password_hash = $${paramIndex++}`); // Corrected column name to password_hash
         queryParams.push(hashedPassword);
       }
 
-      if (userData.roles) {
-        updateFields.push(`roles = $${paramIndex++}`);
-        queryParams.push(userData.roles);
+      if (userData.role) { // Corrected from userData.roles (singular for a single user's role)
+        updateFields.push(`role = $${paramIndex++}`); // Corrected column name to role
+        queryParams.push(userData.role);
       }
 
       // Check if there are any fields to update before adding timestamp
@@ -271,7 +272,7 @@ class UserService {
       updateQuery += ` WHERE id = $${paramIndex++}`;
       queryParams.push(id);
 
-      updateQuery += ' RETURNING id, first_name, last_name, email, roles';
+      updateQuery += ' RETURNING id, first_name, last_name, email, role'; // Corrected column name to role
 
       // Execute update
       const result = await this.pool.query(updateQuery, queryParams);
