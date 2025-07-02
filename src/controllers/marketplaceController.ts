@@ -48,7 +48,8 @@ export const createMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    const listingData = { ...req.body, user_id: userId };
+    // CHANGED: Use seller_id to match database schema
+    const listingData = { ...req.body, seller_id: userId };
     const { listing_id } = await marketplaceService.createMineralListing(listingData);
     res.status(201).json({ message: 'Mineral listing created successfully', listing_id });
   } catch (error) {
@@ -70,8 +71,8 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Check if user is the owner or an admin
-    const isOwner = listing.user_id === userId;
+    // CHANGED: Check against listing.seller_id
+    const isOwner = listing.seller_id === userId;
     const isAdmin = userRoles.includes('admin');
 
     if (!isOwner && !isAdmin) {
@@ -100,8 +101,8 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Check if user is the owner or an admin
-    const isOwner = listing.user_id === userId;
+    // CHANGED: Check against listing.seller_id
+    const isOwner = listing.seller_id === userId;
     const isAdmin = userRoles.includes('admin');
 
     if (!isOwner && !isAdmin) {
@@ -168,7 +169,8 @@ export const getOffersForListing = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const isOwner = listing.user_id === userId;
+    // CHANGED: Check against listing.seller_id
+    const isOwner = listing.seller_id === userId;
     const isAdmin = userRoles.includes('admin');
 
     if (!isOwner && !isAdmin) {
