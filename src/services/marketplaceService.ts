@@ -28,27 +28,28 @@ export class MarketplaceService {
       await client.query('BEGIN');
 
       // Insert mineral listing - using actual database columns
+      // CHANGED: Column names and corresponding data access to match mineral_listings schema
+      // Removed 'grade' and 'available' as they are not in the current schema
       const insertListingQuery = `
         INSERT INTO mineral_listings (
-          user_id, commodity_type, volume, grade,
-          origin_location, price_per_unit, currency,
-          available, description, status
+          seller_id, mineral_type, quantity,
+          location, price_per_unit, currency,
+          description, status, unit
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id;
       `;
 
       const listingResult = await client.query(insertListingQuery, [
-        listingData.user_id,
-        listingData.commodity_type,
-        listingData.volume,
-        listingData.grade || null,
-        listingData.origin_location,
-        listingData.price_per_unit,
+        listingData.seller_id, // Corrected from user_id
+        listingData.mineralType, // Corrected from commodity_type (and matches incoming camelCase)
+        listingData.quantity, // Corrected from volume (and matches incoming camelCase)
+        listingData.location, // Corrected from origin_location (and matches incoming camelCase)
+        listingData.pricePerUnit, // Corrected from price_per_unit (and matches incoming camelCase)
         listingData.currency || 'USD',
-        listingData.available !== false, // Default to true
         listingData.description || null,
-        'active' // Default status
+        listingData.status || 'available', // Default status, allowing override from input
+        listingData.unit // Added unit as it's a NOT NULL column
       ]);
 
       const listingId = listingResult.rows[0].id;
@@ -84,14 +85,14 @@ export class MarketplaceService {
       let paramIndex = 1;
 
       // Apply filters
-      if (filters?.commodity_type) {
-        query += ` AND commodity_type = $${paramIndex++}`;
-        queryParams.push(filters.commodity_type);
+      if (filters?.mineral_type) { // CHANGED: filter by mineral_type
+        query += ` AND mineral_type = $${paramIndex++}`;
+        queryParams.push(filters.mineral_type);
       }
 
-      if (filters?.origin_location) {
-        query += ` AND origin_location ILIKE $${paramIndex++}`;
-        queryParams.push(`%${filters.origin_location}%`);
+      if (filters?.location) { // CHANGED: filter by location
+        query += ` AND location ILIKE $${paramIndex++}`;
+        queryParams.push(`%${filters.location}%`);
       }
 
       if (filters?.min_price) {
@@ -104,8 +105,9 @@ export class MarketplaceService {
         queryParams.push(filters.max_price);
       }
 
-      if (filters?.available_only) {
-        query += ` AND available = true`;
+      if (filters?.status) { // CHANGED: filter by status
+        query += ` AND status = $${paramIndex++}`;
+        queryParams.push(filters.status);
       }
 
       // Add sorting
@@ -158,7 +160,8 @@ export class MarketplaceService {
         throw new Error('Listing not found');
       }
 
-      if (existingListing.user_id !== userId) {
+      // CHANGED: Check against existingListing.seller_id
+      if (existingListing.seller_id !== userId) {
         throw new Error('Unauthorized: You can only update your own listings');
       }
 
@@ -167,19 +170,19 @@ export class MarketplaceService {
       const queryParams: any[] = [];
       let paramIndex = 1;
 
-      if (updateData.commodity_type) {
-        updateFields.push(`commodity_type = $${paramIndex++}`);
-        queryParams.push(updateData.commodity_type);
+      if (updateData.mineralType) { // CHANGED: from commodity_type
+        updateFields.push(`mineral_type = $${paramIndex++}`);
+        queryParams.push(updateData.mineralType);
       }
 
-      if (updateData.volume !== undefined) {
-        updateFields.push(`volume = $${paramIndex++}`);
-        queryParams.push(updateData.volume);
+      if (updateData.quantity !== undefined) { // CHANGED: from volume
+        updateFields.push(`quantity = $${paramIndex++}`);
+        queryParams.push(updateData.quantity);
       }
 
-      if (updateData.price_per_unit !== undefined) {
+      if (updateData.pricePerUnit !== undefined) { // CHANGED: from price_per_unit
         updateFields.push(`price_per_unit = $${paramIndex++}`);
-        queryParams.push(updateData.price_per_unit);
+        queryParams.push(updateData.pricePerUnit);
       }
 
       if (updateData.description !== undefined) {
@@ -187,19 +190,19 @@ export class MarketplaceService {
         queryParams.push(updateData.description);
       }
 
-      if (updateData.available !== undefined) {
-        updateFields.push(`available = $${paramIndex++}`);
-        queryParams.push(updateData.available);
+      if (updateData.status !== undefined) { // CHANGED: from available
+        updateFields.push(`status = $${paramIndex++}`);
+        queryParams.push(updateData.status);
       }
 
-      if (updateData.grade !== undefined) {
-        updateFields.push(`grade = $${paramIndex++}`);
-        queryParams.push(updateData.grade);
+      if (updateData.unit !== undefined) { // ADDED: unit update
+        updateFields.push(`unit = $${paramIndex++}`);
+        queryParams.push(updateData.unit);
       }
 
-      if (updateData.origin_location !== undefined) {
-        updateFields.push(`origin_location = $${paramIndex++}`);
-        queryParams.push(updateData.origin_location);
+      if (updateData.location !== undefined) { // CHANGED: from origin_location
+        updateFields.push(`location = $${paramIndex++}`);
+        queryParams.push(updateData.location);
       }
 
       if (updateFields.length === 0) {
@@ -234,7 +237,8 @@ export class MarketplaceService {
         throw new Error('Listing not found');
       }
 
-      if (existingListing.user_id !== userId) {
+      // CHANGED: Check against existingListing.seller_id
+      if (existingListing.seller_id !== userId) {
         throw new Error('Unauthorized: You can only delete your own listings');
       }
 
@@ -259,7 +263,7 @@ export class MarketplaceService {
 
       const insertOfferQuery = `
         INSERT INTO mineral_offers (
-          listing_id, buyer_id, offer_price, currency, volume, status, message, expiry_date
+          listing_id, buyer_id, offer_price, currency, offer_quantity, status, message, expiry_date
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
@@ -270,10 +274,10 @@ export class MarketplaceService {
         offerData.buyer_id,
         offerData.offer_price,
         offerData.currency,
-        offerData.volume,
+        offerData.offer_quantity, // Corrected from volume
         offerData.status || 'pending',
-        offerData.message,
-        offerData.expiry_date
+        offerData.message || null, // Added null for optional message
+        offerData.expiry_date || null // Added null for optional expiry_date
       ]);
 
       return { offer_id: result.rows[0].id };
@@ -329,7 +333,7 @@ export class MarketplaceService {
   async getOffersByBuyer(buyerId: number): Promise<any[]> {
     try {
       const query = `
-        SELECT mo.*, ml.commodity_type, ml.volume as listing_volume, ml.price as listing_price
+        SELECT mo.*, ml.mineral_type, ml.quantity as listing_quantity, ml.price_per_unit as listing_price_per_unit
         FROM mineral_offers mo
         JOIN mineral_listings ml ON mo.listing_id = ml.id
         WHERE mo.buyer_id = $1
