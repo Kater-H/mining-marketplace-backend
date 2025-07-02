@@ -4,10 +4,10 @@ import { Transaction } from '../models/interfaces/marketplace.js'; // Import Tra
 import { config } from '../config/config.js'; // Import config for frontendUrl
 import Stripe from 'stripe'; // Import Stripe SDK
 
-// Initialize Stripe with your secret key and API version
-const stripe = new Stripe(config.stripeSecretKey, {
-  apiVersion: '2022-11-15', // Use the API version from your Stripe dashboard
-});
+// Initialize Stripe with your secret key
+// REMOVED: apiVersion to let Stripe SDK use its default latest version,
+// which should resolve the TypeScript error.
+const stripe = new Stripe(config.stripeSecretKey);
 
 const paymentService = new PaymentService();
 

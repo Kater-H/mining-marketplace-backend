@@ -5,10 +5,10 @@ import { config } from '../config/config.js'; // Import config for secret keys
 import Stripe from 'stripe'; // Import Stripe SDK
 import crypto from 'crypto'; // For Flutterwave, but generally useful for hashing
 
-// Initialize Stripe with your secret key and API version
-const stripe = new Stripe(config.stripeSecretKey, {
-  apiVersion: '2022-11-15', // Use the API version from your Stripe dashboard
-});
+// Initialize Stripe with your secret key
+// REMOVED: apiVersion to let Stripe SDK use its default latest version,
+// which should resolve the TypeScript error.
+const stripe = new Stripe(config.stripeSecretKey);
 
 // If you plan to use Flutterwave, uncomment and initialize here
 // import Flutterwave from 'flutterwave-node-v3';
@@ -29,7 +29,7 @@ export class PaymentService {
    * @returns The ID of the created transaction.
    */
   async createTransaction(transactionData: Transaction): Promise<{ transaction_id: number }> {
-    const client = await this.pool.connect();
+    const client = await this.pool.connect(); // Client acquired
     try {
       await client.query('BEGIN');
 
@@ -70,8 +70,8 @@ export class PaymentService {
       // Potentially update listing status to 'pending' or 'sold'
       // Mark listing as 'pending' to indicate it's under transaction
       await client.query(
-        `UPDATE mineral_listings SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-        ['pending', transactionData.listing_id]
+        `UPDATE mineral_listings SET status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [transactionData.listing_id]
       );
 
 
@@ -82,7 +82,7 @@ export class PaymentService {
       console.error('Error creating transaction:', error);
       throw error;
     } finally {
-      client.release();
+      client.release(); // Client released
     }
   }
 
