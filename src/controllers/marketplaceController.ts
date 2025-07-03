@@ -1,10 +1,30 @@
 import { Request, Response } from 'express';
-import { MarketplaceService } from '../services/marketplaceService.js'; // ADDED .js
-import { UserService } from '../services/userService.js'; // ADDED .js
-import { UserRole } from '../interfaces/user.js'; // ADDED .js
+import { MarketplaceService } from '../services/marketplaceService.js';
+import { UserService } from '../services/userService.js';
+import { UserRole } from '../interfaces/user.js';
+import {
+  createListingSchema,
+  updateListingSchema,
+  createOfferSchema,
+  updateOfferStatusSchema
+} from '../validation/marketplaceValidation.js'; // Import Joi schemas
 
 const marketplaceService = new MarketplaceService();
 const userService = new UserService();
+
+// Helper function for Joi validation
+const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): boolean => {
+  const { error } = schema.validate(data, { abortEarly: false, allowUnknown: false });
+  if (error) {
+    res.status(400).json({
+      message: 'Validation failed',
+      errors: error.details.map(detail => detail.message)
+    });
+    return false;
+  }
+  return true;
+};
+
 
 // Get all mineral listings
 export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
@@ -22,6 +42,10 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
 export const getMineralListingById = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
+    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid listing ID' });
+      return;
+    }
     const listing = await marketplaceService.getMineralListingById(listingId);
     if (!listing) {
       res.status(404).json({ message: 'Mineral listing not found' });
@@ -37,18 +61,19 @@ export const getMineralListingById = async (req: Request, res: Response): Promis
 // Create a new mineral listing (Seller/Admin only)
 export const createMineralListing = async (req: Request, res: Response): Promise<void> => {
   try {
-    // User is attached by the authenticate middleware
-    const userId = (req as any).user.id;
-    const userRole = (req as any).user.roles[0]; // Assuming roles is an array, take the first one
-    console.log('User Role:', userRole);
+    // Joi validation for request body
+    if (!validateRequest(createListingSchema, req.body, res)) {
+      return; // Validation failed, response already sent
+    }
 
-    // Basic role check - Use string literals directly
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.roles[0];
+
     if (userRole !== 'seller' && userRole !== 'admin') {
       res.status(403).json({ message: 'Forbidden: Only sellers or admins can create listings' });
       return;
     }
 
-    // CHANGED: Use seller_id to match database schema
     const listingData = { ...req.body, seller_id: userId };
     const { listing_id } = await marketplaceService.createMineralListing(listingData);
     res.status(201).json({ message: 'Mineral listing created successfully', listing_id });
@@ -62,8 +87,18 @@ export const createMineralListing = async (req: Request, res: Response): Promise
 export const updateMineralListing = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
+    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid listing ID' });
+      return;
+    }
+
+    // Joi validation for request body
+    if (!validateRequest(updateListingSchema, req.body, res)) {
+      return; // Validation failed, response already sent
+    }
+
     const userId = (req as any).user.id;
-    const userRoles = (req as any).user.roles; // Get user roles
+    const userRoles = (req as any).user.roles;
 
     const listing = await marketplaceService.getMineralListingById(listingId);
     if (!listing) {
@@ -71,15 +106,6 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    // This check is now redundant here as it's moved to the service layer for consistency
-    // const isOwner = listing.seller_id === userId;
-    // const isAdmin = userRoles.includes('admin');
-    // if (!isOwner && !isAdmin) {
-    //   res.status(403).json({ message: 'Forbidden: You can only update your own listings or be an admin' });
-    //   return;
-    // }
-
-    // CHANGED: Pass userRoles to the service method
     const updatedListing = await marketplaceService.updateMineralListing(listingId, req.body, userId, userRoles);
     res.status(200).json({ message: 'Mineral listing updated successfully', listing: updatedListing });
   } catch (error) {
@@ -92,8 +118,13 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
 export const deleteMineralListing = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
+    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid listing ID' });
+      return;
+    }
+
     const userId = (req as any).user.id;
-    const userRoles = (req as any).user.roles; // Get user roles
+    const userRoles = (req as any).user.roles;
 
     const listing = await marketplaceService.getMineralListingById(listingId);
     if (!listing) {
@@ -101,15 +132,6 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
       return;
     }
 
-    // This check is now redundant here as it's moved to the service layer for consistency
-    // const isOwner = listing.seller_id === userId;
-    // const isAdmin = userRoles.includes('admin');
-    // if (!isOwner && !isAdmin) {
-    //   res.status(403).json({ message: 'Forbidden: You can only delete your own listings or be an admin' });
-    //   return;
-    // }
-
-    // CHANGED: Pass userRoles to the service method
     const success = await marketplaceService.deleteMineralListing(listingId, userId, userRoles);
     if (success) {
       res.status(204).send(); // No content for successful deletion
@@ -118,13 +140,26 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
     }
   } catch (error) {
     console.error('Error deleting mineral listing:', error);
-    throw error;
+    // Handle specific foreign key constraint error more gracefully
+    if ((error as any).code === '23503') { // PostgreSQL foreign key violation error code
+      res.status(409).json({
+        message: 'Failed to delete listing due to existing related transactions or offers.',
+        error: (error as any).detail || 'Foreign key constraint violation.'
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to delete mineral listing', error: (error as Error).message });
+    }
   }
 };
 
 // Create a mineral offer
 export const createMineralOffer = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Joi validation for request body
+    if (!validateRequest(createOfferSchema, req.body, res)) {
+      return; // Validation failed, response already sent
+    }
+
     const buyerId = (req as any).user.id;
     const offerData = { ...req.body, buyer_id: buyerId };
     const { offer_id } = await marketplaceService.createMineralOffer(offerData);
@@ -139,10 +174,19 @@ export const createMineralOffer = async (req: Request, res: Response): Promise<v
 export const updateMineralOfferStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const offerId = parseInt(req.params.id);
+    if (isNaN(offerId) || offerId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid offer ID' });
+      return;
+    }
+
+    // Joi validation for request body
+    if (!validateRequest(updateOfferStatusSchema, req.body, res)) {
+      return; // Validation failed, response already sent
+    }
+
     const { status } = req.body;
     const userRoles = (req as any).user.roles;
 
-    // Check if user is seller or admin
     if (!userRoles.includes('seller') && !userRoles.includes('admin')) {
       res.status(403).json({ message: 'Forbidden: Only sellers or admins can update offer status' });
       return;
@@ -160,6 +204,11 @@ export const updateMineralOfferStatus = async (req: Request, res: Response): Pro
 export const getOffersForListing = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
+    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid listing ID' });
+      return;
+    }
+
     const userId = (req as any).user.id;
     const userRoles = (req as any).user.roles;
 
@@ -188,18 +237,9 @@ export const getOffersForListing = async (req: Request, res: Response): Promise<
 // Get offers made by a specific buyer
 export const getOffersByBuyer = async (req: Request, res: Response): Promise<void> => {
   try {
-    // CHANGED: Directly use userId from authenticated token for 'my-offers' route
-    const buyerId = (req as any).user.id;
-    const userRoles = (req as any).user.roles;
-
-    // The authorization middleware already checks for 'buyer' role.
-    // This additional check ensures that if an admin tries to view 'my-offers'
-    // it returns their own offers, or if a buyer tries to view someone else's by ID (not this route)
-    // it would be forbidden. For /my-offers, this check effectively ensures the user
-    // is who they say they are (which auth middleware already handles) or an admin.
-    // No need for `isOwner` check here, as `buyerId` is already the authenticated user's ID.
-    // If you wanted to allow admins to view *any* buyer's offers by ID, you'd need a different route like /offers/:buyerId
-    // For /my-offers, the `buyerId` is always the authenticated user's ID.
+    const buyerId = (req as any).user.id; // Use ID from authenticated token
+    // No Joi validation for req.params.id here as it's not part of the route for /my-offers
+    // and buyerId is derived from authentication.
 
     const offers = await marketplaceService.getOffersByBuyer(buyerId);
     res.status(200).json(offers);

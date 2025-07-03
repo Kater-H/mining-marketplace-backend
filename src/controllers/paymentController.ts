@@ -3,13 +3,93 @@ import { PaymentService } from '../services/paymentService.js'; // Ensure .js is
 import { Transaction } from '../models/interfaces/marketplace.js'; // Import Transaction interface
 import { config } from '../config/config.js'; // Import config for frontendUrl
 import Stripe from 'stripe'; // Import Stripe SDK
+import Joi from 'joi'; // Import Joi
 
 // Initialize Stripe with your secret key
-// REMOVED: apiVersion to let Stripe SDK use its default latest version,
-// which should resolve the TypeScript error.
 const stripe = new Stripe(config.stripeSecretKey);
 
 const paymentService = new PaymentService();
+
+// Helper function for Joi validation
+const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): boolean => {
+  const { error } = schema.validate(data, { abortEarly: false, allowUnknown: false });
+  if (error) {
+    res.status(400).json({
+      message: 'Validation failed',
+      errors: error.details.map(detail => detail.message)
+    });
+    return false;
+  }
+  return true;
+};
+
+// Joi schema for creating a payment/transaction
+export const createPaymentSchema = Joi.object({
+  listing_id: Joi.number().integer().positive().required()
+    .messages({
+      'number.base': 'Listing ID must be a number.',
+      'number.integer': 'Listing ID must be an integer.',
+      'number.positive': 'Listing ID must be a positive number.',
+      'any.required': 'Listing ID is required.'
+    }),
+  seller_id: Joi.number().integer().positive().required()
+    .messages({
+      'number.base': 'Seller ID must be a number.',
+      'number.integer': 'Seller ID must be an integer.',
+      'number.positive': 'Seller ID must be a positive number.',
+      'any.required': 'Seller ID is required.'
+    }),
+  offer_id: Joi.number().integer().positive().allow(null).optional()
+    .messages({
+      'number.base': 'Offer ID must be a number.',
+      'number.integer': 'Offer ID must be an integer.',
+      'number.positive': 'Offer ID must be a positive number.'
+    }),
+  final_price: Joi.number().positive().precision(8).required()
+    .messages({
+      'number.base': 'Final price must be a number.',
+      'number.positive': 'Final price must be a positive number.',
+      'number.precision': 'Final price can have at most 8 decimal places.',
+      'any.required': 'Final price is required.'
+    }),
+  final_quantity: Joi.number().positive().precision(8).required()
+    .messages({
+      'number.base': 'Final quantity must be a number.',
+      'number.positive': 'Final quantity must be a positive number.',
+      'number.precision': 'Final quantity can have at most 8 decimal places.',
+      'any.required': 'Final quantity is required.'
+    }),
+  currency: Joi.string().length(3).uppercase().required()
+    .messages({
+      'string.empty': 'Currency cannot be empty.',
+      'string.length': 'Currency must be 3 characters long (e.g., USD).',
+      'string.uppercase': 'Currency must be in uppercase.',
+      'any.required': 'Currency is required.'
+    }),
+  mineralType: Joi.string().min(2).max(100).required() // Added for Stripe product name
+    .messages({
+      'string.empty': 'Mineral type cannot be empty.',
+      'string.min': 'Mineral type must be at least 2 characters long.',
+      'string.max': 'Mineral type cannot exceed 100 characters.',
+      'any.required': 'Mineral type is required.'
+    })
+});
+
+// Joi schema for updating transaction status
+export const updateTransactionStatusSchema = Joi.object({
+  status: Joi.string()
+    .valid('completed', 'pending', 'failed', 'refunded')
+    .required()
+    .messages({
+      'any.only': 'Status must be one of "completed", "pending", "failed", "refunded".',
+      'any.required': 'Status is required.'
+    }),
+  paymentGatewayId: Joi.string().max(255).optional().allow(null) // Allow null for initial status
+    .messages({
+      'string.max': 'Payment Gateway ID cannot exceed 255 characters.'
+    })
+});
+
 
 /**
  * Initiates a payment process and creates a pending transaction.
@@ -19,14 +99,13 @@ const paymentService = new PaymentService();
  */
 export const createPayment = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Joi validation for request body
+    if (!validateRequest(createPaymentSchema, req.body, res)) {
+      return; // Validation failed, response already sent
+    }
+
     const { listing_id, offer_id, final_price, final_quantity, currency, seller_id, mineralType } = req.body;
     const buyer_id = (req as any).user.id; // Get buyer ID from authenticated user
-
-    // Basic validation
-    if (!listing_id || !buyer_id || !seller_id || !final_price || !final_quantity || !currency || !mineralType) {
-      res.status(400).json({ message: 'Missing required transaction details' });
-      return;
-    }
 
     // Create a pending transaction in your DB first
     const transactionData: Transaction = {
@@ -71,34 +150,6 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
 
     res.status(200).json({ message: 'Payment initiated', checkout_url: session.url, transaction_id });
 
-    // Example (Flutterwave Inline Payment) - keep commented unless fully implementing
-    // const payload = {
-    //   tx_ref: `TX-${Date.now()}-${transaction_id}`, // Unique transaction reference
-    //   amount: final_price * final_quantity,
-    //   currency: currency,
-    //   redirect_url: `${config.frontendUrl}/success?transaction_id=${transaction_id}`,
-    //   customer: {
-    //     email: (req as any).user.email, // Assuming user email is available
-    //     phonenumber: (req as any).user.phoneNumber || 'N/A',
-    //     name: `${(req as any).user.firstName} ${(req as any).user.lastName}`,
-    //   },
-    //   customizations: {
-    //     title: 'Mineral Purchase',
-    //     description: `Payment for Listing ${listing_id}`,
-    //   },
-    //   meta: {
-    //     transaction_id: transaction_id, // Link your internal transaction ID to Flutterwave
-    //     listing_id: listing_id,
-    //     buyer_id: buyer_id,
-    //   }
-    // };
-    // const response = await flw.Payment.initiate(payload);
-    // if (response.status === 'success') {
-    //   res.status(200).json({ message: 'Payment initiated', checkout_url: response.data.link });
-    // } else {
-    //   throw new Error('Failed to initiate Flutterwave payment');
-    // }
-
   } catch (error) {
     console.error('Error creating payment/transaction:', error);
     res.status(500).json({ message: 'Failed to create payment/transaction', error: (error as Error).message });
@@ -114,10 +165,10 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
  */
 export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
   const provider = req.params.provider as 'stripe' | 'flutterwave'; // 'stripe' or 'flutterwave'
-  // FIX: Ensure signature is always a string. Headers can be string | string[]
   const signatureHeader = req.headers['stripe-signature'] || req.headers['x-flw-signature'];
-  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader || ''; // Default to empty string if null/undefined
-  const rawBody = (req as any).rawBody; // Ensure you have a raw body parser middleware before this!
+  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader || '';
+
+  const rawBody = (req as any).rawBody;
 
   if (!signature || !rawBody) {
     res.status(400).json({ message: 'Missing webhook signature or raw body' });
@@ -141,6 +192,11 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
 export const getTransactionById = async (req: Request, res: Response): Promise<void> => {
   try {
     const transactionId = parseInt(req.params.id);
+    if (isNaN(transactionId) || transactionId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid transaction ID' });
+      return;
+    }
+
     const transaction = await paymentService.getTransactionById(transactionId);
 
     if (!transaction) {
@@ -148,7 +204,6 @@ export const getTransactionById = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // Optional: Add authorization check here (e.g., only buyer/seller/admin can view their transactions)
     const userId = (req as any).user.id;
     const userRoles = (req as any).user.roles;
     const isAdmin = userRoles.includes('admin');
@@ -158,7 +213,6 @@ export const getTransactionById = async (req: Request, res: Response): Promise<v
       res.status(403).json({ message: 'Forbidden: You can only view your own transactions or as an admin' });
       return;
     }
-
 
     res.status(200).json(transaction);
   } catch (error) {
@@ -175,17 +229,19 @@ export const getTransactionById = async (req: Request, res: Response): Promise<v
 export const updateTransactionStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const transactionId = parseInt(req.params.id);
-    const { status, paymentGatewayId } = req.body;
-
-    // Basic validation for status
-    const validStatuses = ['completed', 'pending', 'failed', 'refunded'];
-    if (!status || !validStatuses.includes(status)) {
-      res.status(400).json({ message: 'Invalid or missing status' });
+    if (isNaN(transactionId) || transactionId <= 0) { // Basic validation for ID param
+      res.status(400).json({ message: 'Invalid transaction ID' });
       return;
     }
 
-    // Authorization: Only admin or internal system should update status directly
+    // Joi validation for request body
+    if (!validateRequest(updateTransactionStatusSchema, req.body, res)) {
+      return; // Validation failed, response already sent
+    }
+
+    const { status, paymentGatewayId } = req.body;
     const userRoles = (req as any).user.roles;
+
     if (!userRoles.includes('admin')) {
       res.status(403).json({ message: 'Forbidden: Only admins can update transaction status directly' });
       return;
