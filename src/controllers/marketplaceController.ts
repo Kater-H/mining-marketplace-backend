@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { MarketplaceService } from '../services/marketplaceService.js';
 import { UserService } from '../services/userService.js';
 import { UserRole } from '../interfaces/user.js';
+import Joi, { ValidationErrorItem } from 'joi'; // ADDED Joi import and ValidationErrorItem
 import {
   createListingSchema,
   updateListingSchema,
@@ -18,7 +19,7 @@ const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): bo
   if (error) {
     res.status(400).json({
       message: 'Validation failed',
-      errors: error.details.map(detail => detail.message)
+      errors: error.details.map((detail: ValidationErrorItem) => detail.message) // ADDED type for detail
     });
     return false;
   }
@@ -237,9 +238,7 @@ export const getOffersForListing = async (req: Request, res: Response): Promise<
 // Get offers made by a specific buyer
 export const getOffersByBuyer = async (req: Request, res: Response): Promise<void> => {
   try {
-    const buyerId = (req as any).user.id; // Use ID from authenticated token
-    // No Joi validation for req.params.id here as it's not part of the route for /my-offers
-    // and buyerId is derived from authentication.
+    const buyerId = (req as any).user.id;
 
     const offers = await marketplaceService.getOffersByBuyer(buyerId);
     res.status(200).json(offers);
