@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit'; // External module, no .js
 
 import { healthRoutes } from './routes/healthRoutes.js'; // ADDED .js
 import { userRoutes } from './routes/userRoutes.js'; // ADDED .js
-import { marketplaceRoutes } from './routes/marketplaceRoutes.js'; // ADDED .js
+import marketplaceRoutes from './routes/marketplaceRoutes.js'; // CHANGED: Default import
 import { paymentRoutes } from './routes/paymentRoutes.js'; // ADDED .js
 
 const app: Express = express();
