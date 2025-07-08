@@ -78,8 +78,13 @@ export class MarketplaceService {
   async getMineralListings(filters?: MineralListingFilter): Promise<any[]> {
     const client = await this.pool.connect(); // Client acquired
     try {
+      // CHANGED: Explicitly select columns instead of SELECT *
       let query = `
-        SELECT * FROM mineral_listings
+        SELECT
+          id, seller_id, mineral_type, description, quantity, unit,
+          price_per_unit, currency, location, status,
+          listed_date, last_updated, created_at, updated_at
+        FROM mineral_listings
         WHERE 1=1
       `;
       const queryParams: any[] = [];
@@ -128,10 +133,23 @@ export class MarketplaceService {
         queryParams.push(offset);
       }
 
+      // --- NEW DEBUG LOGS ---
+      console.log('🔍 Service: Executing query for getMineralListings:', query);
+      console.log('🔍 Service: Query parameters for getMineralListings:', queryParams);
+      // --- END NEW DEBUG LOGS ---
+
       const result = await client.query(query, queryParams); // Used client
+
+      // --- NEW DEBUG LOGS ---
+      console.log('✅ Service: Query successful for getMineralListings. Rows returned:', result.rows.length);
+      if (result.rows.length > 0) {
+        console.log('✅ Service: First row data from getMineralListings:', JSON.stringify(result.rows[0], null, 2));
+      }
+      // --- END NEW DEBUG LOGS ---
+
       return result.rows;
     } catch (error) {
-      console.error('Error getting mineral listings:', error);
+      console.error('❌ Service: Error getting mineral listings:', error);
       throw error;
     } finally {
       client.release(); // Client released
@@ -266,7 +284,15 @@ export class MarketplaceService {
       return result.rowCount > 0;
     } catch (error) {
       console.error('Error deleting mineral listing:', error);
-      throw error;
+      // Handle specific foreign key constraint error more gracefully
+      if ((error as any).code === '23503') {
+        res.status(409).json({
+          message: 'Failed to delete listing due to existing related transactions or offers.',
+          error: (error as any).detail || 'Foreign key constraint violation.'
+        });
+      } else {
+        throw error; // Re-throw other errors
+      }
     } finally {
       client.release(); // Client released
     }

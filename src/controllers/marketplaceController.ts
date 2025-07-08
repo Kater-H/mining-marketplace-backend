@@ -29,9 +29,8 @@ const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): bo
 // Get all mineral listings
 export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
   try {
-    // DEBUG LOG ADDED HERE (FINAL VERSION)
-    console.log('DEBUG: getMineralListings - FINAL ATTEMPT VERSION');
-    console.log('🔍 getMineralListings: Incoming req.query:', req.query);
+    // DEBUG LOGS ADDED HERE
+    console.log('🔍 Controller: getMineralListings - Incoming req.query:', req.query);
 
     const filterSchema = Joi.object({
         // Frontend likely sends camelCase, so validate for camelCase
@@ -50,7 +49,7 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
     const { error, value: validatedQueryParams } = filterSchema.validate(req.query);
 
     if (error) {
-        console.error('❌ getMineralListings: Joi validation error:', error.details);
+        console.error('❌ Controller: Joi validation error for getMineralListings:', error.details);
         res.status(400).json({
             message: 'Invalid filter parameters',
             errors: error.details.map((detail: ValidationErrorItem) => detail.message)
@@ -70,13 +69,21 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
     if (validatedQueryParams.limit) filters.limit = validatedQueryParams.limit;
     if (validatedQueryParams.page) filters.page = validatedQueryParams.page;
 
-    console.log('🔍 getMineralListings: Filters passed to service:', filters);
+    console.log('🔍 Controller: Filters passed to service for getMineralListings:', filters);
 
     // Pass the transformed filters to the service
     const listings = await marketplaceService.getMineralListings(filters);
+
+    // --- NEW DEBUG LOGS ---
+    console.log('✅ Controller: Listings received from service. Count:', listings.length);
+    if (listings.length > 0) {
+      console.log('✅ Controller: First listing data received:', JSON.stringify(listings[0], null, 2));
+    }
+    // --- END NEW DEBUG LOGS ---
+
     res.status(200).json(listings);
   } catch (error) {
-    console.error('❌ Error getting mineral listings:', error);
+    console.error('❌ Controller: Error getting mineral listings:', error);
     res.status(500).json({ message: 'Failed to retrieve mineral listings', error: (error as Error).message });
   }
 };
