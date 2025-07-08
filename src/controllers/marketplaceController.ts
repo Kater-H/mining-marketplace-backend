@@ -26,63 +26,41 @@ const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): bo
   return true;
 };
 
-// Get all mineral listings - TEMPORARY DUMMY FUNCTION FOR DEBUGGING
-export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
-  console.log('🔥🔥🔥 DUMMY getMineralListings Controller Executed! 🔥🔥🔥');
-  console.log('🔍 Dummy Function: Incoming req.query (raw):', req.query);
-  try {
-    // Simulate a successful response with some dummy data
-    const dummyListings = [
-      { id: 99, mineralType: 'Dummy Gold Ore', description: 'This is a test listing.', quantity: 100, unit: 'kg', pricePerUnit: 50.00, currency: 'USD', location: 'Testville', status: 'available', listedDate: '2024-07-08', lastUpdated: '2024-07-08', sellerId: 101 },
-      { id: 100, mineralType: 'Dummy Copper', description: 'Another test listing.', quantity: 200, unit: 'tons', pricePerUnit: 1200.00, currency: 'USD', location: 'Sampleton', status: 'available', listedDate: '2024-07-08', lastUpdated: '2024-07-08', sellerId: 102 }
-    ];
-    res.status(200).json(dummyListings);
-    console.log('✅✅✅ DUMMY getMineralListings Controller Sent 200 OK ✅✅✅');
-  } catch (error) {
-    console.error('❌❌❌ DUMMY getMineralListings Controller Caught Unexpected Error:', error);
-    res.status(500).json({ message: 'Dummy function failed', error: (error as Error).message });
-  }
-};
-
-
-// Original getMineralListings (commented out for this test)
-/*
+// Get all mineral listings - RESTORED ORIGINAL FUNCTION WITH DEBUG LOGS
 export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
   try {
     // --- SUPER DEBUG LOGS ---
-    console.log('🔥🔥🔥 START getMineralListings Controller Execution (Joi Disabled) 🔥🔥🔥');
+    console.log('🔥🔥🔥 START getMineralListings Controller Execution (Joi Re-enabled) 🔥🔥🔥');
     console.log('🔍 Controller: getMineralListings - Incoming req.query (raw):', req.query);
     // --- END SUPER DEBUG LOGS ---
 
-    // TEMPORARILY COMMENTED OUT JOI VALIDATION FOR DEBUGGING
-    // const filterSchema = Joi.object({
-    //     mineralType: Joi.string().optional(),
-    //     location: Joi.string().optional(),
-    //     status: Joi.string().valid('available', 'pending', 'sold', 'canceled').optional(),
-    //     minPrice: Joi.number().min(0).optional(),
-    //     maxPrice: Joi.number().min(0).optional(),
-    //     sortBy: Joi.string().valid('created_at', 'price_per_unit', 'quantity').optional(),
-    //     sortDirection: Joi.string().valid('asc', 'desc').optional(),
-    //     limit: Joi.number().integer().min(1).optional(),
-    //     page: Joi.number().integer().min(1).optional()
-    // }).unknown(true);
-    //
-    // // Validate the query parameters
-    // const { error, value: validatedQueryParams } = filterSchema.validate(req.query);
-    //
-    // if (error) {
-    //     console.error('❌❌❌ Controller: Joi validation FAILED for getMineralListings. Full Error Details:', JSON.stringify(error, null, 2));
-    //     res.status(400).json({
-    //         message: 'Invalid filter parameters',
-    //         errors: error.details.map((detail: ValidationErrorItem) => detail.message)
-    //     });
-    //     return;
-    // }
+    const filterSchema = Joi.object({
+        mineralType: Joi.string().optional(),
+        location: Joi.string().optional(),
+        status: Joi.string().valid('available', 'pending', 'sold', 'canceled').optional(),
+        minPrice: Joi.number().min(0).optional(),
+        maxPrice: Joi.number().min(0).optional(),
+        sortBy: Joi.string().valid('created_at', 'price_per_unit', 'quantity').optional(),
+        sortDirection: Joi.string().valid('asc', 'desc').optional(),
+        limit: Joi.number().integer().min(1).optional(),
+        page: Joi.number().integer().min(1).optional()
+    }).unknown(true); // Allow unknown keys to avoid validation errors for unexpected params
+
+    // Validate the query parameters
+    const { error, value: validatedQueryParams } = filterSchema.validate(req.query);
+
+    if (error) {
+        // --- SUPER DEBUG LOGS: Log full error object ---
+        console.error('❌❌❌ Controller: Joi validation FAILED for getMineralListings. Full Error Details:', JSON.stringify(error, null, 2));
+        // --- END SUPER DEBUG LOGS ---
+        res.status(400).json({
+            message: 'Invalid filter parameters',
+            errors: error.details.map((detail: ValidationErrorItem) => detail.message)
+        });
+        return;
+    }
 
     // Transform validatedQueryParams (camelCase from frontend) to filters (snake_case for service)
-    // For now, directly use req.query (assuming no validation needed for this test)
-    const validatedQueryParams = req.query; // Directly use req.query for this test
-
     const filters: any = {};
     if (validatedQueryParams.mineralType) filters.mineral_type = validatedQueryParams.mineralType;
     if (validatedQueryParams.location) filters.location = validatedQueryParams.location;
@@ -94,7 +72,7 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
     if (validatedQueryParams.limit) filters.limit = validatedQueryParams.limit;
     if (validatedQueryParams.page) filters.page = validatedQueryParams.page;
 
-    console.log('🔍 Controller: Filters passed to service for getMineralListings (after temp Joi bypass):', filters);
+    console.log('🔍 Controller: Filters passed to service for getMineralListings:', filters);
 
     // Pass the transformed filters to the service
     const listings = await marketplaceService.getMineralListings(filters);
@@ -113,7 +91,7 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
     res.status(500).json({ message: 'Failed to retrieve mineral listings', error: (error as Error).message });
   }
 };
-*/
+
 
 // Get mineral listing by ID
 export const getMineralListingById = async (req: Request, res: Response): Promise<void> => {
