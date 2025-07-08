@@ -2,13 +2,13 @@ import { Request, Response } from 'express';
 import { MarketplaceService } from '../services/marketplaceService.js';
 import { UserService } from '../services/userService.js';
 import { UserRole } from '../interfaces/user.js';
-import Joi, { ValidationErrorItem } from 'joi'; // ADDED Joi import and ValidationErrorItem
+import Joi, { ValidationErrorItem } from 'joi';
 import {
   createListingSchema,
   updateListingSchema,
   createOfferSchema,
   updateOfferStatusSchema
-} from '../validation/marketplaceValidation.js'; // Import Joi schemas
+} from '../validation/marketplaceValidation.js';
 
 const marketplaceService = new MarketplaceService();
 const userService = new UserService();
@@ -19,22 +19,64 @@ const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): bo
   if (error) {
     res.status(400).json({
       message: 'Validation failed',
-      errors: error.details.map((detail: ValidationErrorItem) => detail.message) // ADDED type for detail
+      errors: error.details.map((detail: ValidationErrorItem) => detail.message)
     });
     return false;
   }
   return true;
 };
 
-
 // Get all mineral listings
 export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const filters = req.query; // Query params are the filters
+    // DEBUG LOG ADDED HERE
+    console.log('DEBUG: getMineralListings - Version 4.0 Active');
+    console.log('🔍 getMineralListings: Incoming req.query:', req.query);
+
+    const filterSchema = Joi.object({
+        // Frontend likely sends camelCase, so validate for camelCase
+        mineralType: Joi.string().optional(),
+        location: Joi.string().optional(),
+        status: Joi.string().valid('available', 'pending', 'sold', 'canceled').optional(),
+        minPrice: Joi.number().min(0).optional(), // Assuming frontend sends minPrice
+        maxPrice: Joi.number().min(0).optional(), // Assuming frontend sends maxPrice
+        sortBy: Joi.string().valid('created_at', 'price_per_unit', 'quantity').optional(), // Frontend may send sortBy, but service expects snake_case for column names
+        sortDirection: Joi.string().valid('asc', 'desc').optional(), // Frontend may send sortDirection
+        limit: Joi.number().integer().min(1).optional(),
+        page: Joi.number().integer().min(1).optional()
+    }).unknown(true); // Allow unknown keys to avoid validation errors for unexpected params
+
+    // Validate the query parameters
+    const { error, value: validatedQueryParams } = filterSchema.validate(req.query);
+
+    if (error) {
+        console.error('❌ getMineralListings: Joi validation error:', error.details);
+        res.status(400).json({
+            message: 'Invalid filter parameters',
+            errors: error.details.map((detail: ValidationErrorItem) => detail.message)
+        });
+        return;
+    }
+
+    // Transform validatedQueryParams (camelCase from frontend) to filters (snake_case for service)
+    const filters: any = {};
+    if (validatedQueryParams.mineralType) filters.mineral_type = validatedQueryParams.mineralType;
+    if (validatedQueryParams.location) filters.location = validatedQueryParams.location;
+    if (validatedQueryParams.status) filters.status = validatedQueryParams.status;
+    if (validatedQueryParams.minPrice) filters.min_price = validatedQueryParams.minPrice;
+    if (validatedQueryParams.maxPrice) filters.max_price = validatedQueryParams.maxPrice;
+    if (validatedQueryParams.sortBy) filters.sort_by = validatedQueryParams.sortBy;
+    if (validatedQueryParams.sortDirection) filters.sort_direction = validatedQueryParams.sortDirection;
+    if (validatedQueryParams.limit) filters.limit = validatedQueryParams.limit;
+    if (validatedQueryParams.page) filters.page = validatedQueryParams.page;
+
+    console.log('🔍 getMineralListings: Filters passed to service:', filters);
+
+    // Pass the transformed filters to the service
     const listings = await marketplaceService.getMineralListings(filters);
     res.status(200).json(listings);
   } catch (error) {
-    console.error('Error getting mineral listings:', error);
+    console.error('❌ Error getting mineral listings:', error);
     res.status(500).json({ message: 'Failed to retrieve mineral listings', error: (error as Error).message });
   }
 };
@@ -43,7 +85,7 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
 export const getMineralListingById = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
-    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+    if (isNaN(listingId) || listingId <= 0) {
       res.status(400).json({ message: 'Invalid listing ID' });
       return;
     }
@@ -64,13 +106,14 @@ export const createMineralListing = async (req: Request, res: Response): Promise
   try {
     // Joi validation for request body
     if (!validateRequest(createListingSchema, req.body, res)) {
-      return; // Validation failed, response already sent
+      return;
     }
 
     const userId = (req as any).user.id;
-    const userRole = (req as any).user.roles[0];
+    const userRoles = (req as any).user.roles; // Get all roles
 
-    if (userRole !== 'seller' && userRole !== 'admin') {
+    // FIX: Check if userRoles includes 'seller' OR 'admin' OR 'miner'
+    if (!userRoles.includes('seller') && !userRoles.includes('admin') && !userRoles.includes('miner')) {
       res.status(403).json({ message: 'Forbidden: Only sellers or admins can create listings' });
       return;
     }
@@ -88,14 +131,14 @@ export const createMineralListing = async (req: Request, res: Response): Promise
 export const updateMineralListing = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
-    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+    if (isNaN(listingId) || listingId <= 0) {
       res.status(400).json({ message: 'Invalid listing ID' });
       return;
     }
 
     // Joi validation for request body
     if (!validateRequest(updateListingSchema, req.body, res)) {
-      return; // Validation failed, response already sent
+      return;
     }
 
     const userId = (req as any).user.id;
@@ -119,7 +162,7 @@ export const updateMineralListing = async (req: Request, res: Response): Promise
 export const deleteMineralListing = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
-    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+    if (isNaN(listingId) || listingId <= 0) {
       res.status(400).json({ message: 'Invalid listing ID' });
       return;
     }
@@ -135,14 +178,14 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
 
     const success = await marketplaceService.deleteMineralListing(listingId, userId, userRoles);
     if (success) {
-      res.status(204).send(); // No content for successful deletion
+      res.status(204).send();
     } else {
       res.status(404).json({ message: 'Mineral listing not found or not authorized to delete' });
     }
   } catch (error) {
     console.error('Error deleting mineral listing:', error);
     // Handle specific foreign key constraint error more gracefully
-    if ((error as any).code === '23503') { // PostgreSQL foreign key violation error code
+    if ((error as any).code === '23503') {
       res.status(409).json({
         message: 'Failed to delete listing due to existing related transactions or offers.',
         error: (error as any).detail || 'Foreign key constraint violation.'
@@ -158,7 +201,7 @@ export const createMineralOffer = async (req: Request, res: Response): Promise<v
   try {
     // Joi validation for request body
     if (!validateRequest(createOfferSchema, req.body, res)) {
-      return; // Validation failed, response already sent
+      return;
     }
 
     const buyerId = (req as any).user.id;
@@ -175,14 +218,14 @@ export const createMineralOffer = async (req: Request, res: Response): Promise<v
 export const updateMineralOfferStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const offerId = parseInt(req.params.id);
-    if (isNaN(offerId) || offerId <= 0) { // Basic validation for ID param
+    if (isNaN(offerId) || offerId <= 0) {
       res.status(400).json({ message: 'Invalid offer ID' });
       return;
     }
 
     // Joi validation for request body
     if (!validateRequest(updateOfferStatusSchema, req.body, res)) {
-      return; // Validation failed, response already sent
+      return;
     }
 
     const { status } = req.body;
@@ -205,7 +248,7 @@ export const updateMineralOfferStatus = async (req: Request, res: Response): Pro
 export const getOffersForListing = async (req: Request, res: Response): Promise<void> => {
   try {
     const listingId = parseInt(req.params.id);
-    if (isNaN(listingId) || listingId <= 0) { // Basic validation for ID param
+    if (isNaN(listingId) || listingId <= 0) {
       res.status(400).json({ message: 'Invalid listing ID' });
       return;
     }
