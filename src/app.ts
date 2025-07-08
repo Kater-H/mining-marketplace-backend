@@ -13,6 +13,13 @@ import { paymentRoutes } from './routes/paymentRoutes.js'; // ADDED .js
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
+// --- NEW: GLOBAL REQUEST LOGGER (VERY FIRST MIDDLEWARE) ---
+app.use((req, res, next) => {
+  console.log(`⚡️ GLOBAL LOGGER: Incoming Request - Method: ${req.method}, URL: ${req.url}, IP: ${req.ip}`);
+  next();
+});
+// --- END NEW GLOBAL REQUEST LOGGER ---
+
 // Security Middleware
 app.use(helmet());
 
@@ -25,10 +32,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Logging Middleware
+// Logging Middleware (morgan) - Keep this as well, it provides more detail
 app.use(morgan('dev'));
 
-// Rate Limiting - TEMPORARILY COMMENTED OUT FOR DEBUGGING
+// Rate Limiting - Still commented out for this test
 // const apiLimiter = rateLimit({
 //   windowMs: 15 * 60 * 1000, // 15 minutes
 //   max: 100, // Limit each IP to 100 requests per windowMs
