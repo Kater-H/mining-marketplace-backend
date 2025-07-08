@@ -28,13 +28,13 @@ app.use(cors(corsOptions));
 // Logging Middleware
 app.use(morgan('dev'));
 
-// Rate Limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
-app.use(apiLimiter);
+// Rate Limiting - TEMPORARILY COMMENTED OUT FOR DEBUGGING
+// const apiLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100, // Limit each IP to 100 requests per windowMs
+//   message: 'Too many requests from this IP, please try again after 15 minutes'
+// });
+// app.use(apiLimiter);
 
 // Body Parser for JSON with rawBody capture for webhooks
 // This middleware must come BEFORE any other body parsing middleware
