@@ -13,12 +13,12 @@ import { paymentRoutes } from './routes/paymentRoutes.js'; // ADDED .js
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
-// --- NEW: GLOBAL REQUEST LOGGER (VERY FIRST MIDDLEWARE) ---
+// --- GLOBAL REQUEST LOGGER (VERY FIRST MIDDLEWARE) ---
 app.use((req, res, next) => {
   console.log(`⚡️ GLOBAL LOGGER: Incoming Request - Method: ${req.method}, URL: ${req.url}, IP: ${req.ip}`);
   next();
 });
-// --- END NEW GLOBAL REQUEST LOGGER ---
+// --- END GLOBAL REQUEST LOGGER ---
 
 // Security Middleware
 app.use(helmet());
@@ -43,13 +43,8 @@ app.use(morgan('dev'));
 // });
 // app.use(apiLimiter);
 
-// Body Parser for JSON with rawBody capture for webhooks - TEMPORARILY COMMENTED OUT FOR DEBUGGING
-// app.use(express.json({
-//     verify: (req, res, buf) => {
-//         // Attach the raw body to the request object for webhook signature verification
-//         (req as any).rawBody = buf.toString();
-//     }
-// }));
+// Body Parser for JSON (re-enabled, removed global verify function)
+app.use(express.json()); // Re-enabled express.json() without the verify function
 
 // Routes
 app.use('/api/health', healthRoutes);
