@@ -187,17 +187,24 @@ export const deleteMineralListing = async (req: Request, res: Response): Promise
     if (success) {
       res.status(204).send();
     } else {
+      // This else block might be hit if the service returns false for some reason,
+      // though the service now throws on not found or forbidden.
       res.status(404).json({ message: 'Mineral listing not found or not authorized to delete' });
     }
   } catch (error) {
-    console.error('Error deleting mineral listing:', error);
-    // Handle specific foreign key constraint error more gracefully
-    if ((error as any).code === '23503') {
+    console.error('❌ Controller: Error deleting mineral listing:', error);
+    // Now, catch the specific error thrown by the service
+    if ((error as Error).message.includes('FOREIGN_KEY_VIOLATION')) {
       res.status(409).json({
         message: 'Failed to delete listing due to existing related transactions or offers.',
-        error: (error as any).detail || 'Foreign key constraint violation.'
+        error: (error as Error).message
       });
-    } else {
+    } else if ((error as Error).message.includes('Listing not found')) {
+      res.status(404).json({ message: 'Listing not found' });
+    } else if ((error as Error).message.includes('Unauthorized')) {
+      res.status(403).json({ message: 'Forbidden: You can only delete your own listings or as an admin' });
+    }
+    else {
       res.status(500).json({ message: 'Failed to delete mineral listing', error: (error as Error).message });
     }
   }

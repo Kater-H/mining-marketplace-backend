@@ -282,14 +282,12 @@ export class MarketplaceService {
       const result = await client.query('DELETE FROM mineral_listings WHERE id = $1', [listingId]); // Used client
 
       return result.rowCount > 0;
-    } catch (error) {
+    } catch (error: any) { // Explicitly type error as 'any' to access 'code'
       console.error('Error deleting mineral listing:', error);
-      // Handle specific foreign key constraint error more gracefully
-      if ((error as any).code === '23503') {
-        res.status(409).json({
-          message: 'Failed to delete listing due to existing related transactions or offers.',
-          error: (error as any).detail || 'Foreign key constraint violation.'
-        });
+      // Handle specific foreign key constraint error more gracefully by throwing a specific error
+      if (error.code === '23503') {
+        // Throw a custom error or a more descriptive standard Error
+        throw new Error('FOREIGN_KEY_VIOLATION: Cannot delete listing due to existing related transactions or offers.');
       } else {
         throw error; // Re-throw other errors
       }
