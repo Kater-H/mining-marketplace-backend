@@ -26,7 +26,27 @@ const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): bo
   return true;
 };
 
-// Get all mineral listings
+// Get all mineral listings - TEMPORARY DUMMY FUNCTION FOR DEBUGGING
+export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
+  console.log('🔥🔥🔥 DUMMY getMineralListings Controller Executed! 🔥🔥🔥');
+  console.log('🔍 Dummy Function: Incoming req.query (raw):', req.query);
+  try {
+    // Simulate a successful response with some dummy data
+    const dummyListings = [
+      { id: 99, mineralType: 'Dummy Gold Ore', description: 'This is a test listing.', quantity: 100, unit: 'kg', pricePerUnit: 50.00, currency: 'USD', location: 'Testville', status: 'available', listedDate: '2024-07-08', lastUpdated: '2024-07-08', sellerId: 101 },
+      { id: 100, mineralType: 'Dummy Copper', description: 'Another test listing.', quantity: 200, unit: 'tons', pricePerUnit: 1200.00, currency: 'USD', location: 'Sampleton', status: 'available', listedDate: '2024-07-08', lastUpdated: '2024-07-08', sellerId: 102 }
+    ];
+    res.status(200).json(dummyListings);
+    console.log('✅✅✅ DUMMY getMineralListings Controller Sent 200 OK ✅✅✅');
+  } catch (error) {
+    console.error('❌❌❌ DUMMY getMineralListings Controller Caught Unexpected Error:', error);
+    res.status(500).json({ message: 'Dummy function failed', error: (error as Error).message });
+  }
+};
+
+
+// Original getMineralListings (commented out for this test)
+/*
 export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
   try {
     // --- SUPER DEBUG LOGS ---
@@ -93,6 +113,7 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
     res.status(500).json({ message: 'Failed to retrieve mineral listings', error: (error as Error).message });
   }
 };
+*/
 
 // Get mineral listing by ID
 export const getMineralListingById = async (req: Request, res: Response): Promise<void> => {
