@@ -29,8 +29,8 @@ const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): bo
 // Get all mineral listings
 export const getMineralListings = async (req: Request, res: Response): Promise<void> => {
   try {
-    // DEBUG LOG ADDED HERE
-    console.log('DEBUG: getMineralListings - Version 4.0 Active');
+    // DEBUG LOG ADDED HERE (FINAL VERSION)
+    console.log('DEBUG: getMineralListings - FINAL ATTEMPT VERSION');
     console.log('🔍 getMineralListings: Incoming req.query:', req.query);
 
     const filterSchema = Joi.object({
