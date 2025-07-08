@@ -16,8 +16,9 @@ import { UserRole } from '../interfaces/user.js'; // Ensure .js is here
 const router = Router();
 
 // Public routes (anyone can view listings)
-router.get('/', getMineralListings);
-router.get('/:id', getMineralListingById);
+// CHANGED: Path from '/' to '/listings' to match the full URL segment
+router.get('/listings', getMineralListings);
+router.get('/:id', getMineralListingById); // This is for /api/marketplace/:id, e.g., /api/marketplace/123
 
 // Authenticated routes
 router.use(authenticate); // Apply authentication to all routes below this point
@@ -33,5 +34,4 @@ router.put('/offers/:id/status', authorize('seller', 'admin'), updateMineralOffe
 router.get('/listings/:id/offers', authorize('seller', 'admin'), getOffersForListing);
 router.get('/offers/my-offers', authorize('buyer'), getOffersByBuyer);
 
-// CHANGED: Export the router as a default export
 export default router;
