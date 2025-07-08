@@ -43,14 +43,13 @@ app.use(morgan('dev'));
 // });
 // app.use(apiLimiter);
 
-// Body Parser for JSON with rawBody capture for webhooks
-// This middleware must come BEFORE any other body parsing middleware
-app.use(express.json({
-    verify: (req, res, buf) => {
-        // Attach the raw body to the request object for webhook signature verification
-        (req as any).rawBody = buf.toString();
-    }
-}));
+// Body Parser for JSON with rawBody capture for webhooks - TEMPORARILY COMMENTED OUT FOR DEBUGGING
+// app.use(express.json({
+//     verify: (req, res, buf) => {
+//         // Attach the raw body to the request object for webhook signature verification
+//         (req as any).rawBody = buf.toString();
+//     }
+// }));
 
 // Routes
 app.use('/api/health', healthRoutes);
