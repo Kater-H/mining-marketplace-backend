@@ -35,16 +35,17 @@ app.use(cors(corsOptions));
 // Logging Middleware (morgan) - Keep this as well, it provides more detail
 app.use(morgan('dev'));
 
-// Rate Limiting - Still commented out for this test
-// const apiLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100, // Limit each IP to 100 requests per windowMs
-//   message: 'Too many requests from this IP, please try again after 15 minutes'
-// });
-// app.use(apiLimiter);
+// Rate Limiting - RE-ENABLED
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use(apiLimiter);
 
 // Body Parser for JSON (re-enabled, removed global verify function)
-app.use(express.json()); // Re-enabled express.json() without the verify function
+// This must come BEFORE any other body parsing middleware for JSON requests
+app.use(express.json());
 
 // Routes
 app.use('/api/health', healthRoutes);

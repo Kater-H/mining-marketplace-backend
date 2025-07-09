@@ -1,33 +1,24 @@
 import { Router } from 'express';
 import {
   createPayment,
-  handleWebhook,
-  getTransactionById,
-  updateTransactionStatus
+  handleWebhook, // Assuming you have a handleWebhook function in your controller
 } from '../controllers/paymentController.js'; // Ensure .js is here
 import { authenticate, authorize } from '../middleware/authMiddleware.js'; // Ensure .js is here
+import express from 'express'; // Import express to use express.raw()
 
 const router = Router();
 
-// Public webhook endpoint (does NOT need authentication)
-// The payment gateway will send events here.
-// e.g., POST /api/payments/webhook/stripe or /api/payments/webhook/flutterwave
-router.post('/webhook/:provider', handleWebhook);
+// Route for creating payments (requires authentication)
+router.post('/', authenticate, authorize('buyer', 'admin'), createPayment);
 
-// Authenticated routes for payment initiation and transaction management
-router.use(authenticate); // Apply authentication to all routes below this point
-
-// Initiate a payment (e.g., create a Stripe Checkout Session, Flutterwave payment link)
-// Buyer role initiates payment for a listing/offer
-router.post('/', authorize('buyer'), createPayment);
-
-// Get a specific transaction by ID
-// Accessible by buyer/seller involved in transaction or admin
-router.get('/:id', getTransactionById);
-
-// Update transaction status (typically for internal use or admin)
-// This is often triggered by webhooks, but an admin might manually adjust.
-router.put('/:id/status', authorize('admin'), updateTransactionStatus);
+// Webhook route - IMPORTANT: This must come BEFORE express.json() if you need the raw body
+// Use express.raw() specifically for webhook endpoints that require the raw body
+// The 'type' option should match the Content-Type header of the incoming webhook
+router.post(
+  '/webhook',
+  express.raw({ type: 'application/json' }), // This middleware parses the raw body
+  handleWebhook // Your controller function to handle the webhook
+);
 
 
 export const paymentRoutes = router;
