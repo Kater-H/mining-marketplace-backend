@@ -135,9 +135,10 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
           product_data: {
             name: `Mineral Listing: ${mineralType} (ID: ${listing_id})`, // Dynamic product name
           },
-          unit_amount: Math.round(final_price * 100), // Stripe expects cents, rounded to integer
+          // MODIFIED: Calculate total amount in cents (price_per_unit * total_quantity)
+          unit_amount: Math.round(final_price * final_quantity * 100),
         },
-        quantity: final_quantity,
+        quantity: 1, // MODIFIED: Always send quantity as 1, as unit_amount now holds the total
       }],
       mode: 'payment',
       success_url: `${config.frontendUrl}/success?transaction_id=${transaction_id}`,
