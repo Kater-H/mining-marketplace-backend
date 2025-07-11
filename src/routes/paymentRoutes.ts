@@ -1,15 +1,21 @@
 import { Router } from 'express';
 import {
   createPayment,
-  handleWebhook, // Assuming you have a handleWebhook function in your controller
-} from '../controllers/paymentController.js'; // Ensure .js is here
-import { authenticate, authorize } from '../middleware/authMiddleware.js'; // Ensure .js is here
+  handleWebhook,
+  getTransactionById, // Import the getTransactionById function
+} from '../controllers/paymentController.js';
+import { authenticate, authorize } from '../middleware/authMiddleware.js';
 import express from 'express'; // Import express to use express.raw()
 
 const router = Router();
 
 // Route for creating payments (requires authentication)
 router.post('/', authenticate, authorize('buyer', 'admin'), createPayment);
+
+// Route for getting a specific payment/transaction by ID (requires authentication)
+// Only the buyer, seller, or an admin should be able to view a transaction
+router.get('/:id', authenticate, authorize('buyer', 'miner', 'admin'), getTransactionById);
+
 
 // Webhook route - IMPORTANT: This must come BEFORE express.json() if you need the raw body
 // Use express.raw() specifically for webhook endpoints that require the raw body
