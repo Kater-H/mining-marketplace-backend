@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PaymentService } from '../services/paymentService.js';
-import { Transaction } from '../models/interfaces/marketplace.js';
+import { Transaction } from '../models/interfaces/marketplace.js'; // Ensure Transaction is imported
 import { config } from '../config/config.js';
 import Stripe from 'stripe';
 import Joi from 'joi';
@@ -93,8 +93,7 @@ export const updateTransactionStatusSchema = Joi.object({
 
 
 /**
- * Initiates a payment process and creates a pending transaction.
- * This would typically involve calling a payment gateway SDK to get a checkout URL or client secret.
+ * Initiates a payment process and creates a pending transaction, or reuses/updates an existing one.
  * @param req Request object (expects listing_id, offer_id, final_price, final_quantity, currency, seller_id in body)
  * @param res Response object
  */
@@ -108,69 +107,79 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     const { listing_id, offer_id, final_price, final_quantity, currency, seller_id, mineralType } = req.body;
     const buyer_id = (req as any).user.id; // Get buyer ID from authenticated user
 
+    let transaction_id: number;
+    let transactionStatusToSet: Transaction['status'] = 'pending'; // Default status for new/reused transactions
+
     // --- NEW LOGIC: Check for existing transaction for this offer_id ---
     if (offer_id) { // Only check if an offer_id is provided
       const existingTransaction = await paymentService.getTransactionByOfferId(offer_id);
       if (existingTransaction) {
-        console.log(`Found existing transaction for offer_id ${offer_id}:`, existingTransaction);
-        if (existingTransaction.status === 'pending' && existingTransaction.payment_gateway_id) {
-          // If transaction is pending and has a Stripe session ID, try to retrieve its URL
-          try {
-            const session = await stripe.checkout.sessions.retrieve(existingTransaction.payment_gateway_id);
-            if (session.url) {
-              console.log('Reusing existing Stripe checkout session URL.');
-              res.status(200).json({
-                message: 'Payment already initiated for this offer. Redirecting to existing checkout.',
-                checkout_url: session.url,
-                transaction_id: existingTransaction.id
-              });
-              return;
-            }
-          } catch (stripeError) {
-            console.warn('Could not retrieve existing Stripe session, creating new one:', (stripeError as Error).message);
-            // Fall through to create a new session if retrieval fails
-          }
-        } else if (existingTransaction.status === 'completed') {
+        console.log(`Found existing transaction for offer_id ${offer_id}. Status: ${existingTransaction.status}.`);
+
+        // If completed, do not proceed with payment for this offer
+        if (existingTransaction.status === 'completed') {
           res.status(200).json({
             message: 'This offer has already been paid for and completed.',
             transaction_id: existingTransaction.id
           });
-          return;
-        } else if (existingTransaction.status === 'failed' || existingTransaction.status === 'refunded') {
-            // Allow creating a new transaction if the previous one failed or was refunded
-            console.log(`Previous transaction for offer ${offer_id} was ${existingTransaction.status}. Creating a new one.`);
-        } else {
-            // For other statuses (e.g., if payment_gateway_id is null for pending), create a new one
-            console.log(`Existing transaction for offer ${offer_id} is in status ${existingTransaction.status} but not ready for reuse. Creating a new one.`);
+          return; // IMPORTANT: Exit here if already completed
         }
+
+        // For pending, failed, or refunded transactions, reuse the existing transaction ID
+        // and create a new Stripe session for it.
+        transaction_id = existingTransaction.id!; // We know ID exists for an existing transaction
+
+        // If previous status was failed/refunded, reset to pending for new attempt
+        if (existingTransaction.status === 'failed' || existingTransaction.status === 'refunded') {
+            transactionStatusToSet = 'pending';
+            console.log(`Previous transaction for offer ${offer_id} was ${existingTransaction.status}. Re-attempting payment with transaction ID ${transaction_id}.`);
+        } else { // existingTransaction.status === 'pending'
+            transactionStatusToSet = 'pending'; // Explicitly keep as pending
+            console.log(`Reusing existing pending transaction ID ${transaction_id} for offer ${offer_id}.`);
+        }
+
+      } else {
+        // No existing transaction for this offer_id, so create a new one
+        const transactionData: Transaction = {
+          listing_id,
+          buyer_id,
+          seller_id,
+          offer_id: offer_id, // offer_id is guaranteed non-null here
+          final_price,
+          final_quantity,
+          currency,
+          status: 'pending', // Initial status for a brand new transaction
+        };
+        const result = await paymentService.createTransaction(transactionData);
+        transaction_id = result.transaction_id;
+        console.log(`Created new transaction with ID ${transaction_id} for offer ${offer_id}.`);
       }
+    } else {
+        // Handle direct purchases (no offer_id provided) - always create a new transaction
+        const transactionData: Transaction = {
+            listing_id,
+            buyer_id,
+            seller_id,
+            offer_id: null, // Explicitly null for direct purchases
+            final_price,
+            final_quantity,
+            currency,
+            status: 'pending', // Initial status for a direct purchase transaction
+        };
+        const result = await paymentService.createTransaction(transactionData);
+        transaction_id = result.transaction_id;
+        console.log(`Created new transaction with ID ${transaction_id} for direct purchase of listing ${listing_id}.`);
     }
-    // --- END NEW LOGIC ---
 
-    // Create a pending transaction in your DB
-    const transactionData: Transaction = {
-      listing_id,
-      buyer_id,
-      seller_id,
-      offer_id: offer_id || null,
-      final_price,
-      final_quantity,
-      currency,
-      status: 'pending', // Initial status
-      // payment_gateway_id will be updated by webhook
-    };
-
-    const { transaction_id } = await paymentService.createTransaction(transactionData);
-
-    // --- INTEGRATE WITH PAYMENT GATEWAY HERE ---
-    // Stripe Checkout Session:
+    // Now, create the Stripe Checkout Session using the determined transaction_id
+    // This part is common whether we reused an existing transaction or created a new one
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: currency,
           product_data: {
-            name: `Mineral Listing: ${mineralType} (ID: ${listing_id})`, // Dynamic product name
+            name: `Mineral Listing: ${mineralType} (ID: ${listing_id})`,
           },
           unit_amount: Math.round(final_price * final_quantity * 100), // Total amount in cents
         },
@@ -188,14 +197,16 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
       },
     });
 
-    // Update the transaction with the Stripe session ID immediately after creation
-    await paymentService.updateTransactionStatus(transaction_id, 'pending', session.id);
+    // Update the transaction with the new Stripe session ID and the determined status
+    await paymentService.updateTransactionStatus(transaction_id, transactionStatusToSet, session.id);
 
     res.status(200).json({ message: 'Payment initiated', checkout_url: session.url, transaction_id });
 
   } catch (error) {
     console.error('Error creating payment/transaction:', error);
-    res.status(500).json({ message: 'Failed to create payment/transaction', error: (error as Error).message });
+    // Extract a more specific error message if available, otherwise a generic one
+    const errorMessage = (error as any).detail || (error as Error).message || 'An unknown error occurred.';
+    res.status(500).json({ message: 'Failed to create payment/transaction', error: errorMessage });
   }
 };
 
