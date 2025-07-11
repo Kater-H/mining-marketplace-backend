@@ -14,6 +14,9 @@ const paymentService = new PaymentService();
 const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): boolean => {
   const { error } = schema.validate(data, { abortEarly: false, allowUnknown: false });
   if (error) {
+    // --- ADDED DEBUG LOG HERE ---
+    console.error('Joi Validation Error Details:', error.details);
+    // --- END ADDED DEBUG LOG ---
     res.status(400).json({
       message: 'Validation failed',
       errors: error.details.map(detail => detail.message)
