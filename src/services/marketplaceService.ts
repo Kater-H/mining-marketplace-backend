@@ -334,6 +334,24 @@ export class MarketplaceService {
     }
   }
 
+  // ADDED: Get a specific mineral offer by ID
+  async getOfferById(offerId: number): Promise<MineralOffer | null> {
+    const client = await this.pool.connect();
+    try {
+      const query = `
+        SELECT * FROM mineral_offers
+        WHERE id = $1
+      `;
+      const result = await client.query(query, [offerId]);
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } catch (error) {
+      console.error('Error getting offer by ID:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   // Update offer status
   async updateOfferStatus(offerId: number, status: string): Promise<any> {
     const client = await this.pool.connect(); // Client acquired
