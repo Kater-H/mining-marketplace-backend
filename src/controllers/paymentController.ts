@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { PaymentService } from '../services/paymentService.js'; // Ensure .js is here
-import { Transaction } from '../models/interfaces/marketplace.js'; // Import Transaction interface
-import { config } from '../config/config.js'; // Import config for frontendUrl
-import Stripe from 'stripe'; // Import Stripe SDK
-import Joi from 'joi'; // Import Joi
+import { PaymentService } from '../services/paymentService.js';
+import { Transaction } from '../models/interfaces/marketplace.js';
+import { config } from '../config/config.js';
+import Stripe from 'stripe';
+import Joi from 'joi';
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(config.stripeSecretKey);
@@ -14,9 +14,7 @@ const paymentService = new PaymentService();
 const validateRequest = (schema: Joi.ObjectSchema, data: any, res: Response): boolean => {
   const { error } = schema.validate(data, { abortEarly: false, allowUnknown: false });
   if (error) {
-    // --- ADDED DEBUG LOG HERE ---
     console.error('Joi Validation Error Details:', error.details);
-    // --- END ADDED DEBUG LOG ---
     res.status(400).json({
       message: 'Validation failed',
       errors: error.details.map(detail => detail.message)
@@ -110,7 +108,46 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     const { listing_id, offer_id, final_price, final_quantity, currency, seller_id, mineralType } = req.body;
     const buyer_id = (req as any).user.id; // Get buyer ID from authenticated user
 
-    // Create a pending transaction in your DB first
+    // --- NEW LOGIC: Check for existing transaction for this offer_id ---
+    if (offer_id) { // Only check if an offer_id is provided
+      const existingTransaction = await paymentService.getTransactionByOfferId(offer_id);
+      if (existingTransaction) {
+        console.log(`Found existing transaction for offer_id ${offer_id}:`, existingTransaction);
+        if (existingTransaction.status === 'pending' && existingTransaction.payment_gateway_id) {
+          // If transaction is pending and has a Stripe session ID, try to retrieve its URL
+          try {
+            const session = await stripe.checkout.sessions.retrieve(existingTransaction.payment_gateway_id);
+            if (session.url) {
+              console.log('Reusing existing Stripe checkout session URL.');
+              res.status(200).json({
+                message: 'Payment already initiated for this offer. Redirecting to existing checkout.',
+                checkout_url: session.url,
+                transaction_id: existingTransaction.id
+              });
+              return;
+            }
+          } catch (stripeError) {
+            console.warn('Could not retrieve existing Stripe session, creating new one:', (stripeError as Error).message);
+            // Fall through to create a new session if retrieval fails
+          }
+        } else if (existingTransaction.status === 'completed') {
+          res.status(200).json({
+            message: 'This offer has already been paid for and completed.',
+            transaction_id: existingTransaction.id
+          });
+          return;
+        } else if (existingTransaction.status === 'failed' || existingTransaction.status === 'refunded') {
+            // Allow creating a new transaction if the previous one failed or was refunded
+            console.log(`Previous transaction for offer ${offer_id} was ${existingTransaction.status}. Creating a new one.`);
+        } else {
+            // For other statuses (e.g., if payment_gateway_id is null for pending), create a new one
+            console.log(`Existing transaction for offer ${offer_id} is in status ${existingTransaction.status} but not ready for reuse. Creating a new one.`);
+        }
+      }
+    }
+    // --- END NEW LOGIC ---
+
+    // Create a pending transaction in your DB
     const transactionData: Transaction = {
       listing_id,
       buyer_id,
@@ -135,10 +172,9 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
           product_data: {
             name: `Mineral Listing: ${mineralType} (ID: ${listing_id})`, // Dynamic product name
           },
-          // MODIFIED: Calculate total amount in cents (price_per_unit * total_quantity)
-          unit_amount: Math.round(final_price * final_quantity * 100),
+          unit_amount: Math.round(final_price * final_quantity * 100), // Total amount in cents
         },
-        quantity: 1, // MODIFIED: Always send quantity as 1, as unit_amount now holds the total
+        quantity: 1, // Always send quantity as 1 when unit_amount is the total
       }],
       mode: 'payment',
       success_url: `${config.frontendUrl}/success?transaction_id=${transaction_id}`,
@@ -151,6 +187,9 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
         offer_id: offer_id ? offer_id.toString() : ''
       },
     });
+
+    // Update the transaction with the Stripe session ID immediately after creation
+    await paymentService.updateTransactionStatus(transaction_id, 'pending', session.id);
 
     res.status(200).json({ message: 'Payment initiated', checkout_url: session.url, transaction_id });
 
