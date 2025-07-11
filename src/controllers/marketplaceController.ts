@@ -35,29 +35,29 @@ export const getMineralListings = async (req: Request, res: Response): Promise<v
     // --- END SUPER DEBUG LOGS ---
 
     const filterSchema = Joi.object({
-        mineralType: Joi.string().optional(),
-        location: Joi.string().optional(),
-        status: Joi.string().valid('available', 'pending', 'sold', 'canceled').optional(),
-        minPrice: Joi.number().min(0).optional(),
-        maxPrice: Joi.number().min(0).optional(),
-        sortBy: Joi.string().valid('created_at', 'price_per_unit', 'quantity').optional(),
-        sortDirection: Joi.string().valid('asc', 'desc').optional(),
-        limit: Joi.number().integer().min(1).optional(),
-        page: Joi.number().integer().min(1).optional()
+      mineralType: Joi.string().optional(),
+      location: Joi.string().optional(),
+      status: Joi.string().valid('available', 'pending', 'sold', 'canceled').optional(),
+      minPrice: Joi.number().min(0).optional(),
+      maxPrice: Joi.number().min(0).optional(),
+      sortBy: Joi.string().valid('created_at', 'price_per_unit', 'quantity').optional(),
+      sortDirection: Joi.string().valid('asc', 'desc').optional(),
+      limit: Joi.number().integer().min(1).optional(),
+      page: Joi.number().integer().min(1).optional()
     }).unknown(true); // Allow unknown keys to avoid validation errors for unexpected params
 
     // Validate the query parameters
     const { error, value: validatedQueryParams } = filterSchema.validate(req.query);
 
     if (error) {
-        // --- SUPER DEBUG LOGS: Log full error object ---
-        console.error('❌❌❌ Controller: Joi validation FAILED for getMineralListings. Full Error Details:', JSON.stringify(error, null, 2));
-        // --- END SUPER DEBUG LOGS ---
-        res.status(400).json({
-            message: 'Invalid filter parameters',
-            errors: error.details.map((detail: ValidationErrorItem) => detail.message)
-        });
-        return;
+      // --- SUPER DEBUG LOGS: Log full error object ---
+      console.error('❌❌❌ Controller: Joi validation FAILED for getMineralListings. Full Error Details:', JSON.stringify(error, null, 2));
+      // --- END SUPER DEBUG LOGS ---
+      res.status(400).json({
+        message: 'Invalid filter parameters',
+        errors: error.details.map((detail: ValidationErrorItem) => detail.message)
+      });
+      return;
     }
 
     // Transform validatedQueryParams (camelCase from frontend) to filters (snake_case for service)
@@ -248,17 +248,41 @@ export const updateMineralOfferStatus = async (req: Request, res: Response): Pro
     }
 
     const { status } = req.body;
+    const userId = (req as any).user.id; // Get the ID of the logged-in user
     const userRoles = (req as any).user.roles;
 
-    if (!userRoles.includes('seller') && !userRoles.includes('admin')) {
-      res.status(403).json({ message: 'Forbidden: Only sellers or admins can update offer status' });
+    // Fetch the offer to get its associated listing ID
+    const offer = await marketplaceService.getOfferById(offerId); // Assuming a getOfferById method in your service
+    if (!offer) {
+      res.status(404).json({ message: 'Offer not found' });
       return;
     }
+
+    // Fetch the listing associated with the offer to get the seller_id
+    const listing = await marketplaceService.getMineralListingById(offer.listing_id);
+    if (!listing) {
+      // This case should ideally not happen if data integrity is maintained,
+      // but it's good to handle for robustness.
+      res.status(404).json({ message: 'Associated listing not found' });
+      return;
+    }
+
+    // --- MODIFIED AUTHORIZATION LOGIC ---
+    // User must be an admin OR the seller of the listing associated with the offer.
+    const isOwner = listing.seller_id === userId;
+    const isAdmin = userRoles.includes('admin');
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json({ message: 'Forbidden: Only the seller of this listing or an admin can update offer status' });
+      return;
+    }
+    // --- END MODIFIED AUTHORIZATION LOGIC ---
 
     const updatedOffer = await marketplaceService.updateOfferStatus(offerId, status);
     res.status(200).json({ message: 'Offer status updated successfully', offer: updatedOffer });
   } catch (error) {
     console.error('Error updating offer status:', error);
+    // You might want to add more specific error handling here based on service errors
     res.status(500).json({ message: 'Failed to update offer status', error: (error as Error).message });
   }
 };
