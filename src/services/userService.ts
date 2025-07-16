@@ -1,16 +1,16 @@
 // src/services/userService.ts
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { pgPool as pool } from '../config/database.js'; // Corrected import: import pgPool as pool
+import { pgPool as pool } from '../config/database.js';
 import { config } from '../config/config.js';
-import { User, UserRole, UserRegistrationData } from '../interfaces/user.js'; // Ensure UserRegistrationData is imported
-import { ApplicationError } from '../utils/applicationError.js'; // Corrected import
+import { User, UserRole, UserRegistrationData } from '../interfaces/user.js';
+import { ApplicationError } from '../utils/applicationError.js';
 
 // User service class
 export class UserService {
-  private pool = pool; // Use the imported pgPool directly, aliased as pool
+  private pool = pool;
   private readonly JWT_SECRET = config.jwtSecret;
-  private readonly EMAIL_VERIFICATION_SECRET = config.jwtSecret; // Using same secret for simplicity, but ideally separate
+  private readonly EMAIL_VERIFICATION_SECRET = config.jwtSecret;
 
   // Register a new user
   async registerUser(firstName: string, lastName: string, email: string, password: string, role: UserRole): Promise<User> {
@@ -21,34 +21,32 @@ export class UserService {
     try {
       const result = await this.pool.query(
         `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number`, // Added company_name, phone_number
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`, // Removed company_name, phone_number
         [firstName, lastName, email, hashedPassword, role, emailVerificationToken, verificationTokenExpiresAt]
       );
-      const newUser = result.rows[0]; // No direct type assertion here, map below
+      const newUser = result.rows[0];
 
-      // In a real application, you would send an email here
       console.log(`Email verification link for ${email}: /api/users/verify-email/${emailVerificationToken}`);
 
-      // Return the user object exactly as per the User interface (snake_case)
       return {
         id: newUser.id,
         email: newUser.email,
-        password: '', // Password should not be returned
+        password: '',
         role: newUser.role,
         first_name: newUser.first_name,
         last_name: newUser.last_name,
         email_verified: newUser.email_verified,
-        verification_token: newUser.email_verification_token, // Corrected to verification_token
+        verification_token: newUser.email_verification_token,
         created_at: newUser.created_at,
         updated_at: newUser.updated_at,
-        company_name: newUser.company_name,
-        phone_number: newUser.phone_number,
+        // company_name: newUser.company_name, // Removed
+        // phone_number: newUser.phone_number, // Removed
       };
     } catch (error: any) {
-      if (error.code === '23505') { // Unique violation code
+      if (error.code === '23505') {
         throw new ApplicationError('Email already registered.', 409);
       }
-      throw new ApplicationError('Failed to register user.', 500, error as Error); // Cast error to Error
+      throw new ApplicationError('Failed to register user.', 500, error as Error);
     }
   }
 
@@ -73,13 +71,13 @@ export class UserService {
       if (error.name === 'JsonWebTokenError') {
         throw new ApplicationError('Invalid email verification token.', 400);
       }
-      throw new ApplicationError('Failed to verify email.', 500, error as Error); // Cast error to Error
+      throw new ApplicationError('Failed to verify email.', 500, error as Error);
     }
   }
 
   // Login user
   async loginUser(email: string, password: string): Promise<{ user: Omit<User, 'password' | 'verification_token'>; token: string }> {
-    const result = await this.pool.query('SELECT id, first_name, last_name, email, password_hash, role, email_verified, created_at, updated_at, company_name, phone_number FROM users WHERE email = $1', [email]); // Removed member_since
+    const result = await this.pool.query('SELECT id, first_name, last_name, email, password_hash, role, email_verified, created_at, updated_at FROM users WHERE email = $1', [email]); // Removed company_name, phone_number
     const user = result.rows[0];
 
     if (!user) {
@@ -101,7 +99,6 @@ export class UserService {
       { expiresIn: config.jwtExpiresIn }
     );
 
-    // Return user object without sensitive data, matching the Omit<User, ...> type
     const userForFrontend: Omit<User, 'password' | 'verification_token'> = {
       id: user.id,
       email: user.email,
@@ -111,8 +108,8 @@ export class UserService {
       email_verified: user.email_verified,
       created_at: user.created_at,
       updated_at: user.updated_at,
-      company_name: user.company_name,
-      phone_number: user.phone_number,
+      // company_name: user.company_name, // Removed
+      // phone_number: user.phone_number, // Removed
     };
 
     return { user: userForFrontend, token };
@@ -122,15 +119,14 @@ export class UserService {
   async getUserProfile(userId: number): Promise<Omit<User, 'password' | 'verification_token'> | null> {
     try {
       const result = await this.pool.query(
-        `SELECT id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number
-         FROM users WHERE id = $1`, // Removed member_since
+        `SELECT id, first_name, last_name, email, role, email_verified, created_at, updated_at
+         FROM users WHERE id = $1`, // Removed company_name, phone_number
         [userId]
       );
       if (result.rows.length === 0) {
         return null;
       }
       const user = result.rows[0];
-      // Return user object matching Omit<User, ...> type
       return {
         id: user.id,
         email: user.email,
@@ -140,11 +136,11 @@ export class UserService {
         email_verified: user.email_verified,
         created_at: user.created_at,
         updated_at: user.updated_at,
-        company_name: user.company_name,
-        phone_number: user.phone_number,
+        // company_name: user.company_name, // Removed
+        // phone_number: user.phone_number, // Removed
       };
     } catch (error) {
-      throw new ApplicationError('Failed to retrieve user profile.', 500, error as Error); // Cast error to Error
+      throw new ApplicationError('Failed to retrieve user profile.', 500, error as Error);
     }
   }
 
@@ -163,7 +159,6 @@ export class UserService {
       values.push(updates.lastName);
     }
     if (updates.email !== undefined) {
-      // Check if new email already exists for another user
       const checkEmailQuery = `SELECT id FROM users WHERE email = $1 AND id != $2`;
       const emailCheckResult = await this.pool.query(checkEmailQuery, [updates.email, userId]);
       if (emailCheckResult.rows.length > 0) {
@@ -174,21 +169,20 @@ export class UserService {
     }
 
     if (fields.length === 0) {
-      return this.getUserProfile(userId); // No updates provided, return current profile
+      return this.getUserProfile(userId);
     }
 
-    fields.push(`updated_at = CURRENT_TIMESTAMP`); // Always update timestamp
-    values.push(userId); // Add userId for the WHERE clause
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(userId);
 
     try {
-      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${queryIndex} RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number`; // Removed member_since
+      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${queryIndex} RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`; // Removed company_name, phone_number
       const result = await this.pool.query(query, values);
 
       if (result.rows.length === 0) {
-        return null; // User not found or no rows updated
+        return null;
       }
       const updatedUser = result.rows[0];
-      // Return updated user object matching Omit<User, ...> type
       return {
         id: updatedUser.id,
         email: updatedUser.email,
@@ -198,14 +192,14 @@ export class UserService {
         email_verified: updatedUser.email_verified,
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,
-        company_name: updatedUser.company_name,
-        phone_number: updatedUser.phone_number,
+        // company_name: updatedUser.company_name, // Removed
+        // phone_number: updatedUser.phone_number, // Removed
       };
     } catch (error: any) {
-      if (error.code === '23505') { // Unique violation code (e.g., duplicate email)
+      if (error.code === '23505') {
         throw new ApplicationError('Email already in use.', 409);
       }
-      throw new ApplicationError('Failed to update user profile.', 500, error as Error); // Cast error to Error
+      throw new ApplicationError('Failed to update user profile.', 500, error as Error);
     }
   }
 }
