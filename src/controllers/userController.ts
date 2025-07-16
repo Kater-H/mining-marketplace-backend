@@ -1,59 +1,51 @@
 // src/controllers/userController.ts
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/userService.js';
-import { UserRole, UserRegistrationData } from '../interfaces/user.js';
+import { ApplicationError } from '../utils/applicationError.js';
+import Joi from 'joi';
+import { BackendUser } from '../interfaces/user.js'; // Import BackendUser for type clarity
 
 const userService = new UserService();
+
+// Joi schema for user registration validation
+const registerSchema = Joi.object({
+  firstName: Joi.string().trim().min(2).max(50).required(),
+  lastName: Joi.string().trim().min(2).max(50).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+  role: Joi.string().valid('buyer', 'miner', 'admin').default('buyer'),
+});
+
+// Joi schema for user login validation
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().required(),
+});
+
+// Joi schema for user profile update validation
+const profileUpdateSchema = Joi.object({
+  firstName: Joi.string().trim().min(2).max(50).optional(),
+  lastName: Joi.string().trim().min(2).max(50).optional(),
+  email: Joi.string().email().optional(),
+});
+
+// Joi schema for compliance status update (Admin-only)
+const complianceStatusUpdateSchema = Joi.object({
+  status: Joi.string().valid('pending', 'compliant', 'non_compliant').required(),
+});
 
 // Register a new user
 export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
-    const user = await userService.registerUser(firstName, lastName, email, password, role as UserRole);
-    res.status(201).json({
-      message: 'User registered successfully. You can now log in.', // Updated message
-      user: {
-        id: user.id,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email,
-        role: user.role,
-        emailVerified: user.email_verified,
-        memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-        companyName: user.company_name,
-        phoneNumber: user.phone_number,
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// REMOVED: verifyUserEmail function is no longer needed
-/*
-export const verifyUserEmail = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token } = req.params;
-    if (!token || typeof token !== 'string') {
-      return next(new Error('Verification token is missing or invalid.'));
+    const { error, value } = registerSchema.validate(req.body);
+    if (error) {
+      throw new ApplicationError(error.details[0].message, 400);
     }
-    await userService.verifyEmail(token);
-    res.status(200).json({ message: 'Email verified successfully!' });
-  } catch (error) {
-    next(error);
-  }
-};
-*/
 
-// Login user
-export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return next(new Error('Email and password are required.'));
-    }
-    const { user, token } = await userService.loginUser(email, password);
-    const userForFrontend = {
+    const { user, token } = await userService.registerUser(value); // Destructure to get 'user' and 'token'
+
+    // Map BackendUser to Frontend User for response
+    const frontendUser = {
       id: user.id,
       firstName: user.first_name,
       lastName: user.last_name,
@@ -63,49 +55,96 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
       memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
       companyName: user.company_name,
       phoneNumber: user.phone_number,
+      complianceStatus: user.compliance_status, // Include compliance status
     };
-    res.status(200).json({ message: 'Login successful', user: userForFrontend, token });
+
+    res.status(201).json({ message: 'User registered successfully.', user: frontendUser, token });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Login user
+export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { error, value } = loginSchema.validate(req.body);
+    if (error) {
+      throw new ApplicationError(error.details[0].message, 400);
+    }
+
+    const { email, password } = value;
+    const { user, token } = await userService.loginUser(email, password); // Destructure to get 'user' and 'token'
+
+    // Map BackendUser to Frontend User for response
+    const frontendUser = {
+      id: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      role: user.role,
+      emailVerified: user.email_verified,
+      memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
+      companyName: user.company_name,
+      phoneNumber: user.phone_number,
+      complianceStatus: user.compliance_status, // Include compliance status
+    };
+
+    res.status(200).json({ message: 'Login successful.', user: frontendUser, token });
   } catch (error) {
     next(error);
   }
 };
 
 // Get user profile
-export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => {
+export const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user!.id;
-    const userProfile = await userService.getUserProfile(userId);
-    if (!userProfile) {
-      return next(new Error('User profile not found.'));
+    const userId = req.user!.id; // User ID from authenticated token
+    const user = await userService.getUserProfile(userId);
+
+    if (!user) {
+      throw new ApplicationError('User profile not found.', 404);
     }
-    const userProfileForFrontend = {
-      id: userProfile.id,
-      firstName: userProfile.first_name,
-      lastName: userProfile.last_name,
-      email: userProfile.email,
-      role: userProfile.role,
-      emailVerified: userProfile.email_verified,
-      memberSince: userProfile.created_at ? new Date(userProfile.created_at).toLocaleDateString() : 'N/A',
-      companyName: userProfile.company_name,
-      phoneNumber: userProfile.phone_number,
+
+    // Map BackendUser to Frontend User for response
+    const frontendUser = {
+      id: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      role: user.role,
+      emailVerified: user.email_verified,
+      memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
+      companyName: user.company_name,
+      phoneNumber: user.phone_number,
+      complianceStatus: user.compliance_status, // Include compliance status
     };
-    res.status(200).json(userProfileForFrontend);
+
+    res.status(200).json(frontendUser);
   } catch (error) {
-    console.error('Error getting user profile:', error);
     next(error);
   }
 };
 
 // Update user profile
-export const updateUserProfile = async (req: Request, res: Response, next: NextFunction) => {
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user!.id;
-    const { firstName, lastName, email } = req.body;
-    const updatedUser = await userService.updateUserProfile(userId, { firstName, lastName, email });
-    if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found or no changes applied.' });
+    const userId = req.user!.id; // User ID from authenticated token
+    const { error, value } = profileUpdateSchema.validate(req.body);
+    if (error) {
+      throw new ApplicationError(error.details[0].message, 400);
     }
-    const updatedUserForFrontend = {
+
+    // Map frontend camelCase to backend snake_case for update
+    const updateData: Partial<BackendUser> = { // Explicitly type updateData
+      first_name: value.firstName,
+      last_name: value.lastName,
+      email: value.email,
+    };
+
+    const updatedUser = await userService.updateUserProfile(userId, updateData);
+
+    // Map BackendUser to Frontend User for response
+    const frontendUser = {
       id: updatedUser.id,
       firstName: updatedUser.first_name,
       lastName: updatedUser.last_name,
@@ -115,10 +154,47 @@ export const updateUserProfile = async (req: Request, res: Response, next: NextF
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
       companyName: updatedUser.company_name,
       phoneNumber: updatedUser.phone_number,
+      complianceStatus: updatedUser.compliance_status, // Include compliance status
     };
-    res.status(200).json({ message: 'User profile updated successfully', user: updatedUserForFrontend });
+
+    res.status(200).json({ message: 'Profile updated successfully.', user: frontendUser });
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    next(error);
+  }
+};
+
+// Admin-only endpoint to set a user's compliance status
+export const setUserComplianceStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userIdToUpdate = parseInt(req.params.userId); // User ID from URL parameter
+    if (isNaN(userIdToUpdate)) {
+      throw new ApplicationError('Invalid user ID provided.', 400);
+    }
+
+    const { error, value } = complianceStatusUpdateSchema.validate(req.body);
+    if (error) {
+      throw new ApplicationError(error.details[0].message, 400);
+    }
+
+    const { status } = value;
+    const updatedUser = await userService.updateUserComplianceStatus(userIdToUpdate, status);
+
+    // Map BackendUser to Frontend User for response
+    const frontendUser = {
+      id: updatedUser.id,
+      firstName: updatedUser.first_name,
+      lastName: updatedUser.last_name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      emailVerified: updatedUser.email_verified,
+      memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
+      companyName: updatedUser.company_name,
+      phoneNumber: updatedUser.phone_number,
+      complianceStatus: updatedUser.compliance_status, // Include compliance status
+    };
+
+    res.status(200).json({ message: `User ${userIdToUpdate} compliance status updated to ${status}.`, user: frontendUser });
+  } catch (error) {
     next(error);
   }
 };

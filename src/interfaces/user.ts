@@ -1,30 +1,31 @@
 // src/interfaces/user.ts
-// UPDATED: Added 'seller' to UserRole
-export type UserRole = 'buyer' | 'miner' | 'admin' | 'seller';
 
-export interface UserRegistrationData {
+// Frontend User interface - uses camelCase for consistency with React component props
+export interface User {
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
-  role: UserRole;
+  role: 'buyer' | 'miner' | 'admin';
+  emailVerified: boolean;
+  memberSince: string; // Assuming a string date like "January 15, 2024"
   companyName?: string;
   phoneNumber?: string;
+  complianceStatus: 'pending' | 'compliant' | 'non_compliant'; 
 }
 
-export interface User {
+// Backend User interface (for data coming from the database/API)
+export interface BackendUser {
   id: number;
   first_name: string;
   last_name: string;
   email: string;
-  password?: string;
-  role: UserRole;
+  password_hash: string; 
+  role: 'buyer' | 'miner' | 'admin';
   email_verified: boolean;
-  verification_token?: string;
   created_at: string;
   updated_at: string;
   company_name?: string;
   phone_number?: string;
+  compliance_status: 'pending' | 'compliant' | 'non_compliant';
 }
-
-export type UserLoginResponse = Omit<User, 'password' | 'verification_token'>;

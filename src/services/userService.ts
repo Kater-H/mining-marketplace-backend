@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
 import { ApplicationError } from '../utils/applicationError.js';
-import { BackendUser } from '../interfaces/user.js'; // Import BackendUser interface
+import { BackendUser } from '../interfaces/user.js'; // Correctly import BackendUser as a named export
 
 export class UserService {
   private pool = pool;
@@ -31,11 +31,11 @@ export class UserService {
 
     const newUser: BackendUser = result.rows[0];
 
-    // Generate JWT token - Explicitly cast secret and expiresIn type
+    // Generate JWT token - Explicitly cast secret and expiresIn to string
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, roles: [newUser.role] },
-      config.jwtSecret as string, // Ensure secret is treated as string
-      { expiresIn: config.jwtExpiresIn as string | number } // Ensure expiresIn type is compatible
+      config.jwtSecret as string,
+      { expiresIn: config.jwtExpiresIn as string } // Ensure expiresIn is a string for jwt.sign
     );
 
     return { user: newUser, token };
@@ -50,17 +50,16 @@ export class UserService {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    // Access password_hash from the user object
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    // Generate JWT token - Explicitly cast secret and expiresIn type
+    // Generate JWT token - Explicitly cast secret and expiresIn to string
     const token = jwt.sign(
       { id: user.id, email: user.email, roles: [user.role] },
-      config.jwtSecret as string, // Ensure secret is treated as string
-      { expiresIn: config.jwtExpiresIn as string | number } // Ensure expiresIn type is compatible
+      config.jwtSecret as string,
+      { expiresIn: config.jwtExpiresIn as string } // Ensure expiresIn is a string for jwt.sign
     );
 
     return { user, token };
