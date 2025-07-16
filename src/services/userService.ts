@@ -34,8 +34,8 @@ export class UserService {
     // Generate JWT token - Explicitly cast secret and expiresIn to string
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, roles: [newUser.role] },
-      config.jwtSecret as string,
-      { expiresIn: config.jwtExpiresIn as string } // Ensure expiresIn is a string for jwt.sign
+      config.jwtSecret as string, // Assert as string
+      { expiresIn: config.jwtExpiresIn as string } // Assert as string
     );
 
     return { user: newUser, token };
@@ -58,8 +58,8 @@ export class UserService {
     // Generate JWT token - Explicitly cast secret and expiresIn to string
     const token = jwt.sign(
       { id: user.id, email: user.email, roles: [user.role] },
-      config.jwtSecret as string,
-      { expiresIn: config.jwtExpiresIn as string } // Ensure expiresIn is a string for jwt.sign
+      config.jwtSecret as string, // Assert as string
+      { expiresIn: config.jwtExpiresIn as string } // Assert as string
     );
 
     return { user, token };
