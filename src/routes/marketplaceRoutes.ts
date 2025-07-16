@@ -1,14 +1,14 @@
 // src/routes/marketplaceRoutes.ts
 import { Router } from 'express';
-// Corrected imports from listingController.js (which is your marketplaceController)
+// Corrected imports from listingController.js
 import {
   createListing,
-  getAllListings,
-  getListingById,
+  getAllListings, // Corrected name
+  getListingById, // Corrected name
   updateListing,
   deleteListing,
   getListingsBySeller,
-} from '../controllers/listingController.js'; // Corrected to listingController.js
+} from '../controllers/listingController.js'; // Ensure this path and filename casing is correct!
 import { authenticate } from '../middleware/authMiddleware.js';
 import { authorizeRoles } from '../middleware/authorizeMiddleware.js'; // This path must be correct!
 
@@ -30,4 +30,4 @@ router.delete('/:id', authorizeRoles(['miner', 'admin']), deleteListing);
 router.get('/my-listings/seller', authorizeRoles(['miner', 'admin']), getListingsBySeller);
 
 // Export as a named export for app.ts
-export const marketplaceRoutes = router; // Export as marketplaceRoutes
+export const marketplaceRoutes = router;
