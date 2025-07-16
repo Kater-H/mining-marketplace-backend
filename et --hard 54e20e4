@@ -1,0 +1,141 @@
+[33mf8fef5b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2025-07-16 16:50:32 +0100}: commit: fix(backend): Addressing final module resolution issues based on file structure
+[33m916f0e4[m HEAD@{2025-07-16 16:44:24 +0100}: commit: fix(backend): Final module resolution and type fixes for deployment
+[33mc1ed693[m HEAD@{2025-07-16 16:29:53 +0100}: commit: fix(backend): Resolve module import and Stripe API version errors
+[33m16b2b07[m HEAD@{2025-07-16 16:28:39 +0100}: checkout: moving from main to main
+[33m16b2b07[m HEAD@{2025-07-16 16:15:44 +0100}: commit: fix(backend): Resolve all remaining TypeScript compilation errors in payment module
+[33m8116ec0[m HEAD@{2025-07-16 16:15:10 +0100}: checkout: moving from main to main
+[33m8116ec0[m HEAD@{2025-07-16 16:04:33 +0100}: commit: fix(backend): Final attempt to resolve TypeScript compilation errors - v3
+[33m6f27193[m HEAD@{2025-07-16 16:04:07 +0100}: checkout: moving from main to main
+[33m6f27193[m HEAD@{2025-07-16 16:00:17 +0100}: checkout: moving from main to main
+[33m6f27193[m HEAD@{2025-07-16 14:43:50 +0100}: commit: fix(stripe): Enforce Stripe minimum amount for checkout sessions
+[33m54e20e4[m HEAD@{2025-07-16 13:04:08 +0100}: commit: fix(backend): Robust CORS config to always allow localhost for dev
+[33m49528c7[m HEAD@{2025-07-16 12:54:54 +0100}: commit: feat(email-verification): Temporarily disable email verification for testing
+[33m5b83252[m HEAD@{2025-07-16 12:35:46 +0100}: commit: fix(backend): Configure CORS to allow local frontend development origin
+[33m0b2d5bc[m HEAD@{2025-07-16 12:25:50 +0100}: commit: fix(backend): Implement robust global error handling and use next(error) in controllers
+[33m4dc7883[m HEAD@{2025-07-16 11:51:14 +0100}: commit: fix(backend): Add 'seller' role to UserRole type definition
+[33m7bd6dd5[m HEAD@{2025-07-16 11:43:46 +0100}: commit: fix(backend): Remove company_name and phone_number from SQL queries to match DB schema
+[33ma55ff94[m HEAD@{2025-07-16 11:18:17 +0100}: commit: fix(backend): Resolve member_since, verification_token, and unknown error types
+[33m01ea41d[m HEAD@{2025-07-16 10:57:43 +0100}: commit: fix(backend): Resolve TypeScript build errors and refine user module
+[33m9df68b5[m HEAD@{2025-07-16 10:22:19 +0100}: commit: feat(backend): Implement user profile view and update APIs with improved error handling
+[33mc8067b7[m HEAD@{2025-07-11 23:33:40 +0100}: reset: moving to c8067b78157e1c618b21c364747953f3c9fca29b
+[33m144fd0d[m HEAD@{2025-07-11 23:26:17 +0100}: commit: Refactor: Adjusted 'my' listings/offers endpoints after rollback verification.
+[33mc8067b7[m HEAD@{2025-07-11 23:03:23 +0100}: reset: moving to c8067b78157e1c618b21c364747953f3c9fca29b
+[33m1bbb81e[m HEAD@{2025-07-11 21:45:10 +0100}: revert: Revert "Fix: Improved backend payment error handling for duplicate offer_id and Stripe errors."
+[33mdf3a5e4[m HEAD@{2025-07-11 21:42:37 +0100}: revert: Revert "Fix: Corrected StripeError type reference in paymentController.ts."
+[33m4b55a29[m HEAD@{2025-07-11 21:31:32 +0100}: revert: Revert "Feat: Implemented 'my' listings, offers, and transactions endpoints using authenticated user ID
+[33m16f6d6f[m HEAD@{2025-07-11 20:44:30 +0100}: commit: Feat: Implemented 'my' listings, offers, and transactions endpoints using authenticated user ID.
+[33md8c7ea9[m HEAD@{2025-07-11 18:40:32 +0100}: commit: Fix: Corrected StripeError type reference in paymentController.ts.
+[33m9c63244[m HEAD@{2025-07-11 18:36:35 +0100}: commit: Fix: Improved backend payment error handling for duplicate offer_id and Stripe errors.
+[33m839d86b[m HEAD@{2025-07-11 18:27:52 +0100}: commit: Fix: Prevented duplicate transactions for the same offer_id.
+[33m0353f95[m HEAD@{2025-07-11 18:21:30 +0100}: commit: Fix: Ensured final_price validation and added debug logs for Stripe unit_amount error.
+[33m059c00e[m HEAD@{2025-07-11 18:09:45 +0100}: commit: Fix: Applied final TypeScript type casting fix in database.ts and confirmed all config imports. This should now resolve all build errors.
+[33m2322325[m HEAD@{2025-07-11 18:02:37 +0100}: commit: Fix: Separated config and database responsibilities, corrected all imports, and ensured consistent pg.Pool usage. This addresses the core circular dependency and config export issues across the entire backend.
+[33m4cef9fa[m HEAD@{2025-07-11 17:22:44 +0100}: commit: Fix: Resolved 'Property on does not exist on type Pool' error in database config, ensuring all DB interactions are consistent with pg.Pool.
+[33m49de42c[m HEAD@{2025-07-11 17:15:33 +0100}: commit: Fix: Aligned backend DB operations to use pg.Pool directly, updated all related imports and queries to raw SQL, and fixed Stripe types.
+[33m73f0175[m HEAD@{2025-07-11 16:34:11 +0100}: commit: Refactor: Consolidated DB connection to src/database/pg.ts and fixed payment service imports
+[33m044cd6a[m HEAD@{2025-07-11 16:22:37 +0100}: commit: Feat: Implemented Stripe webhook handler and fixed database import path (pgPool)
+[33maf6466a[m HEAD@{2025-07-11 12:29:49 +0100}: commit: Fix: Re-attempting TypeScript build error resolution with verified imports/exports and tsconfig
+[33m13cc046[m HEAD@{2025-07-11 11:43:20 +0100}: commit: Feat: Implement Stripe webhook handler for transaction and listing status updates
+[33mc8067b7[m HEAD@{2025-07-11 03:35:15 +0100}: commit: Feat: Add GET /payments/:id route for fetching transaction details
+[33m73be991[m HEAD@{2025-07-11 03:18:52 +0100}: commit: Fix: Allow 'completed' status in updateOfferStatusSchema
+[33m701a80f[m HEAD@{2025-07-11 02:57:55 +0100}: commit: Fix: Correctly reuse existing transaction for offers instead of creating duplicates
+[33mcfe2df1[m HEAD@{2025-07-11 02:50:54 +0100}: commit: Fix: Prevent duplicate transactions for offers in paymentController
+[33mdd75793[m HEAD@{2025-07-11 02:46:20 +0100}: commit: Feat: Define TransactionStatus in marketplace interfaces
+[33mb4d90ca[m HEAD@{2025-07-11 02:41:48 +0100}: commit: Feat: Add getTransactionByOfferId to PaymentService
+[33m88dc5a6[m HEAD@{2025-07-11 02:34:26 +0100}: commit: Fix: Adjust Stripe line_items quantity and unit_amount for fractional quantities
+[33m2f9dba9[m HEAD@{2025-07-11 02:26:34 +0100}: commit: Add Joi validation error logging to paymentController
+[33m1f2bda8[m HEAD@{2025-07-11 02:09:41 +0100}: commit: Fix: Add getOfferById method to MarketplaceService class in TypeScript
+[33mc8ac861[m HEAD@{2025-07-11 02:04:33 +0100}: commit: Apply marketplaceController.ts fix with debug logs for offer status update
+[33m556ceb6[m HEAD@{2025-07-09 23:22:51 +0100}: commit: Fix: Corrected route path for GET /listings/:id in marketplaceRoutes.ts
+[33m245cf76[m HEAD@{2025-07-09 23:00:00 +0100}: commit: Feat: Re-enabled rate limiting; Configured raw body parsing for webhook route
+[33m78ef481[m HEAD@{2025-07-08 22:48:39 +0100}: commit: Fix: Restored original getMineralListings controller with Joi validation re-enabled
+[33m5ff3c50[m HEAD@{2025-07-08 22:25:14 +0100}: commit: Fix: Corrected /listings path in marketplaceRoutes.ts
+[33mdc72503[m HEAD@{2025-07-08 22:18:47 +0100}: commit: Fix: Re-enabled express.json() and removed global verify function
+[33mb941df7[m HEAD@{2025-07-08 22:11:34 +0100}: commit: Debug: Temporarily disabled express.json() middleware in app.ts
+[33m87cfc30[m HEAD@{2025-07-08 22:05:29 +0100}: commit: Debug: Added global request logger as first middleware in app.ts
+[33mc418bfe[m HEAD@{2025-07-08 21:59:23 +0100}: commit: Debug: Temporarily disabled express-rate-limit in app.ts
+[33mc0d8414[m HEAD@{2025-07-08 21:50:38 +0100}: commit: Debug: Replaced getMineralListings with dummy function to isolate routing issue
+[33m242238b[m HEAD@{2025-07-08 21:43:33 +0100}: commit: Debug: Temporarily bypass Joi validation for GET /listings to isolate 400 error
+[33mefae13b[m HEAD@{2025-07-08 21:33:40 +0100}: commit: Fix: Change marketplaceRoutes to default export/import for TS compatibility
+[33m7d89559[m HEAD@{2025-07-08 21:27:14 +0100}: commit: Debug: Enhanced logging in marketplaceController for GET /listings error
+[33m5dd6fcf[m HEAD@{2025-07-08 21:11:31 +0100}: commit: Fix: Refactor error handling in marketplaceService and marketplaceController for build success
+[33m74c2c63[m HEAD@{2025-07-08 21:07:17 +0100}: commit: Fix: Add detailed logging and explicit SELECT columns for marketplace listings
+[33mc01d5e8[m HEAD@{2025-07-08 20:21:17 +0100}: commit: Feat: Implement email verification token and bypass verification for testing
+[33m9518cf5[m HEAD@{2025-07-08 12:25:36 +0100}: commit (amend): Render debug commit
+[33m0b32ac9[m HEAD@{2025-07-08 10:47:44 +0100}: commit: Render debug commit
+[33m0d1954b[m HEAD@{2025-07-08 10:23:19 +0100}: commit (amend): Backend: Fix marketplaceController for miner role and GET listings validation
+[33m1b2fc6d[m HEAD@{2025-07-08 10:05:59 +0100}: commit (amend): Backend: Fix marketplaceController for miner role and GET listings validation
+[33mf395242[m HEAD@{2025-07-08 09:48:26 +0100}: commit (amend): Backend: Fix marketplaceController for miner role and GET listings validation
+[33mb9b3e35[m HEAD@{2025-07-08 09:07:06 +0100}: commit: Backend: Fix marketplaceController for miner role and GET listings validation
+[33me43344c[m HEAD@{2025-07-06 01:11:26 +0100}: commit: Backend: Apply fixes for demo admin token and miner role authorization
+[33mc14e99e[m HEAD@{2025-07-03 01:12:31 +0100}: commit: Fix: Added Joi import and typed ValidationErrorItem in marketplaceController.ts
+[33m1b92b6c[m HEAD@{2025-07-03 01:09:11 +0100}: commit: Feat: Implemented Joi validation for marketplace and payment controllers
+[33medd98f9[m HEAD@{2025-07-03 00:02:58 +0100}: commit: Fix: Resolved TypeScript errors related to config properties (logLevel, jwtExpiresIn) and Stripe API version
+[33m18dd834[m HEAD@{2025-07-02 23:55:13 +0100}: commit: Feat: Integrated Stripe Checkout session creation and webhook verification
+[33m6aad559[m HEAD@{2025-07-02 20:11:29 +0100}: commit: Fix: Added root health check route to healthRoutes.ts
+[33m54bd8ab[m HEAD@{2025-07-02 18:39:04 +0100}: commit: Fix: Ensured client acquisition in all marketplaceService methods to prevent 'Cannot find name client' errors
+[33m4eadfc6[m HEAD@{2025-07-02 18:34:50 +0100}: commit: Fix: Refined authorization logic in marketplaceService to allow admin override and added client.release()
+[33m28478a8[m HEAD@{2025-07-02 18:15:18 +0100}: commit: Fix: Handle string[] type for webhook signature header in paymentController
+[33mfe4e062[m HEAD@{2025-07-02 18:12:24 +0100}: commit: Feat: Added rawBody middleware for webhook handling in app.ts
+[33mf4b620b[m HEAD@{2025-07-02 17:39:10 +0100}: commit: Fix: Corrected getOffersByBuyer to use authenticated user ID
+[33mc6a020b[m HEAD@{2025-07-02 11:56:46 +0100}: commit: Fix: Removed duplicate marketplace.ts file and ensured correct interface definitions are staged
+[33m07e4ebf[m HEAD@{2025-07-02 11:27:43 +0100}: commit: Fix: Updated marketplace interfaces to match schema and code
+[33m529aae9[m HEAD@{2025-07-02 11:22:53 +0100}: commit: Fix: Corrected column names and data mapping in MarketplaceService SQL queries
+[33mc5e28f5[m HEAD@{2025-07-02 11:14:08 +0100}: commit: Fix: Corrected seller_id column name in marketplaceController
+[33m3fdb0fd[m HEAD@{2025-07-02 03:14:27 +0100}: commit: Fix: jsonwebtoken import in UserService for ES Modules
+[33m19148ac[m HEAD@{2025-07-02 03:08:20 +0100}: commit: Fix: Bcrypt import and user data field mapping in UserService
+[33m75bf60f[m HEAD@{2025-07-02 01:59:22 +0100}: commit: Fix: Ensure __tests__ directory is excluded from TypeScript compilation (retry)
+[33mb336ae5[m HEAD@{2025-06-29 00:25:54 +0100}: commit: Fix: Replace require() with import for jsonwebtoken in userService.ts for ESM compatibility
+[33m02d468a[m HEAD@{2025-06-29 00:19:07 +0100}: commit: Final final fix: Aggressive any cast for Flutterwave initialize to force compilation
+[33mdc33104[m HEAD@{2025-06-29 00:15:29 +0100}: commit: Final fix: Explicit .js extensions for all relative imports in files causing build errors
+[33m9ba1bec[m HEAD@{2025-06-29 00:00:42 +0100}: commit: Fix: Add .js extensions to ALL relative imports for NodeNext module resolution
+[33m0e6d6bc[m HEAD@{2025-06-25 00:14:24 +0100}: commit: Fix: Configure tsconfig for NodeNext module resolution to include .js extensions in compiled output imports
+[33m30ec46f[m HEAD@{2025-06-25 00:09:23 +0100}: commit: Fix: Bypass Flutterwave type error with any cast to enable build completion
+[33m9f9907b[m HEAD@{2025-06-25 00:05:28 +0100}: commit: Fix: Final targeted fixes for pg.Pool.on and Flutterwave initialize method type errors
+[33m6df1a26[m HEAD@{2025-06-25 00:01:13 +0100}: commit: Fix: Resolve remaining TypeScript compilation errors for pg.Pool.on and Flutterwave API method
+[33m5f40d47[m HEAD@{2025-06-24 23:57:09 +0100}: commit: Fix: Address latest TypeScript compilation errors including UserRole type usage, circular imports, Stripe API version, and testing mocks
+[33m7e49d58[m HEAD@{2025-06-24 23:45:21 +0100}: commit: Fix: Comprehensive code and config updates for TypeScript compilation and ESM compatibility
+[33m2599d05[m HEAD@{2025-06-24 22:59:43 +0100}: commit: Fix: Comprehensive compilation error fixes for ESM, types, and dependencies
+[33mf40c756[m HEAD@{2025-06-24 22:37:42 +0100}: commit: Fix: Remove comments from package.json for JSON validity
+[33m1bbe353[m HEAD@{2025-06-24 22:34:48 +0100}: commit: Fix: Revert UserRole to type, add build step, and update package.json for production deployment
+[33m0787730[m HEAD@{2025-06-24 22:22:05 +0100}: commit: Feat: Convert UserRole to enum for better ESM resolution; update usage
+[33m97e1741[m HEAD@{2025-06-24 22:12:27 +0100}: commit: Fix: Add dummy export to user.ts and re-confirm authMiddleware.ts imports for ESM compatibility
+[33m6202171[m HEAD@{2025-06-24 22:05:54 +0100}: commit: Fix: Adjust express imports for ESM compatibility in authMiddleware.ts
+[33me5084be[m HEAD@{2025-06-24 22:00:58 +0100}: commit: Fix: Adjust express imports for ESM compatibility in healthController.ts
+[33m8a11f11[m HEAD@{2025-06-24 21:48:57 +0100}: commit: Fix: Final syntax correction for paymentService.ts template literal
+[33m144a2c8[m HEAD@{2025-06-24 21:12:18 +0100}: commit: Fix: Add .ts extensions to database and config imports in paymentService.ts
+[33me443f79[m HEAD@{2025-06-24 21:06:45 +0100}: commit: Fix: Correct bcrypt import to bcryptjs and add .ts to local imports in userService.ts
+[33m6f29601[m HEAD@{2025-06-24 21:02:11 +0100}: commit: Fix: Add .ts extensions to database and marketplace interfaces imports in marketplaceService.ts
+[33md45ca75[m HEAD@{2025-06-24 20:56:02 +0100}: commit: feat: Add @types/pg to devDependencies
+[33m6e28623[m HEAD@{2025-06-24 20:52:13 +0100}: commit: feat: Add pg and flutterwave-node-v3 dependencies to package.json
+[33m770b0eb[m HEAD@{2025-06-24 20:47:00 +0100}: commit: feat: Add stripe and @types/stripe dependencies via npm
+[33m5635b00[m HEAD@{2025-06-24 20:39:26 +0100}: commit: Fix: Add .ts extensions to paymentService and config imports in paymentController.ts
+[33mc18f417[m HEAD@{2025-06-24 20:34:11 +0100}: commit: Fix: Add .ts extension to userService import in userController.ts
+[33m52580c1[m HEAD@{2025-06-24 20:29:40 +0100}: commit: Fix: Add .ts extensions to marketplaceService and MineralOffer imports in marketplaceController.ts
+[33m78a4568[m HEAD@{2025-06-24 20:26:07 +0100}: commit: Fix: Add .ts extensions to config and UserRole imports in authMiddleware.ts
+[33m9755664[m HEAD@{2025-06-24 20:22:10 +0100}: commit: Fix: Add .ts extensions to imports in paymentRoutes.ts (and other related files)
+[33me032b3c[m HEAD@{2025-06-24 20:18:59 +0100}: commit: Fix: Add .ts extensions for module resolution across relevant files
+[33m9a52f58[m HEAD@{2025-06-24 20:12:14 +0100}: commit: Add .ts extensions to marketplaceRoutes imports for module resolution
+[33m0db447d[m HEAD@{2025-06-24 20:01:03 +0100}: commit: Add .ts extensions to healthRoutes imports for module resolution
+[33m5f55698[m HEAD@{2025-06-24 19:56:53 +0100}: commit: Add type: module to package.json for ES module compatibility
+[33m9cce433[m HEAD@{2025-06-24 19:46:12 +0100}: commit: Add .ts extensions to import statements for proper module resolution
+[33m407b445[m HEAD@{2025-06-24 19:34:33 +0100}: commit: Fix package.json and app.ts imports to match Render's project structure
+[33m1e4f407[m HEAD@{2025-06-24 18:58:44 +0100}: commit: Move app.ts to root and fix import paths for Render deployment
+[33m394f961[m HEAD@{2025-06-24 17:22:28 +0100}: commit: Fix start command to avoid double src path
+[33m56bb473[m HEAD@{2025-06-24 17:15:42 +0100}: commit: Fix healthRoutes export to match import
+[33m3c45a67[m HEAD@{2025-06-24 15:46:12 +0100}: commit: Add complete dependencies including morgan
+[33m363bbb4[m HEAD@{2025-06-24 15:36:02 +0100}: commit: Add missing dependencies for Render deployment
+[33m5beca95[m HEAD@{2025-06-24 15:16:48 +0100}: commit: Fix ES module configuration for CommonJS compatibility
+[33mb00fdcd[m HEAD@{2025-06-24 14:42:29 +0100}: commit: Clean setup for fresh Railway deployment
+[33m22299aa[m HEAD@{2025-06-24 14:28:58 +0100}: commit: Implement minimal dependencies approach
+[33m65abc89[m HEAD@{2025-06-24 14:09:38 +0100}: commit: Fix JSON syntax with clean package.json
+[33mfdd9c9d[m HEAD@{2025-06-24 14:05:16 +0100}: commit: Fix start script to use app.ts instead of server.ts
+[33m30d5c56[m HEAD@{2025-06-24 13:49:27 +0100}: commit: Remove Dockerfile to use native Node.js builder
+[33m3580e95[m HEAD@{2025-06-24 13:43:15 +0100}: commit: Fix JSON syntax error in package.json
+[33m0e4640a[m HEAD@{2025-06-24 13:34:08 +0100}: commit: Fix corrupted JSON file extensions
+[33m036db1c[m HEAD@{2025-06-23 23:14:51 +0100}: commit: Fix TypeScript configuration for ES modules
+[33m2d778c3[m HEAD@{2025-06-23 23:05:14 +0100}: commit: Restore complete project from backup
+[33me286ac4[m HEAD@{2025-06-22 20:43:19 +0100}: commit (merge): Resolve merge conflicts - keep GitHub versions
+[33mab692fe[m HEAD@{2025-06-22 20:39:34 +0100}: revert: Revert "Initial commit: Complete Mining Marketplace backend"
+[33mdde519d[m HEAD@{2025-06-22 20:39:18 +0100}: reset: moving to HEAD
+[33mdde519d[m HEAD@{2025-06-22 02:55:17 +0100}: commit (initial): Initial commit: Complete Mining Marketplace backend
