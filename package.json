@@ -5,9 +5,9 @@
   "main": "dist/app.js",
   "type": "module",
   "scripts": {
-    "start": "node dist/server.js", <--- CHANGED THIS LINE
+    "start": "node dist/server.js",
     "build": "tsc",
-    "dev": "nodemon --exec \"node --loader ts-node/esm\" src/server.ts", <--- CHANGED THIS LINE (if you use nodemon locally)
+    "dev": "nodemon --exec \"node --loader ts-node/esm\" src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
