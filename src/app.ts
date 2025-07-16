@@ -5,10 +5,12 @@ import cors from 'cors'; // External module, no .js
 import morgan from 'morgan'; // External module, no .js
 import rateLimit from 'express-rate-limit'; // External module, no .js
 
-import { healthRoutes } from './routes/healthRoutes.js'; // ADDED .js
-import { userRoutes } from './routes/userRoutes.js'; // ADDED .js
-import marketplaceRoutes from './routes/marketplaceRoutes.js'; // CHANGED: Default import
-import { paymentRoutes } from './routes/paymentRoutes.js'; // ADDED .js
+import { healthRoutes } from './routes/healthRoutes.js';
+import { userRoutes } from './routes/userRoutes.js';
+import marketplaceRoutes from './routes/marketplaceRoutes.js';
+import { paymentRoutes } from './routes/paymentRoutes.js';
+import { errorHandler } from './middleware/errorHandler.js'; // IMPORT YOUR CUSTOM ERROR HANDLER
+import { ApplicationError } from './utils/applicationError.js'; // IMPORT ApplicationError
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -53,12 +55,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/payments', paymentRoutes);
 
-
-// Basic error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
+// Catch-all for 404 - IMPORTANT: This should come BEFORE the general errorHandler
+app.use((req, res, next) => {
+  next(new ApplicationError('Not Found', 404));
 });
+
+// Global Error Handling Middleware - MUST BE THE VERY LAST middleware registered
+app.use(errorHandler);
 
 // Start the server
 app.listen(PORT, () => {
