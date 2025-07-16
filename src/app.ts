@@ -26,10 +26,23 @@ app.use((req, res, next) => {
 app.use(helmet());
 
 // CORS Configuration
+// In development, allow localhost. In production, use the actual frontend URL.
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.CORS_ORIGIN || 'https://mining-marketplace-frontend-your-render-url.onrender.com'] // Replace with your actual frontend Render URL
+  : ['http://localhost:5173', 'http://127.0.0.1:5173']; // Add other local dev origins if needed
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*', // Adjust in production
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
+  credentials: true, // Allow cookies to be sent
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
