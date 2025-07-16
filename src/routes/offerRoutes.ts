@@ -1,25 +1,35 @@
 // src/routes/offerRoutes.ts
 import { Router } from 'express';
-// Placeholder imports - replace with actual controllers and middleware later
-import { createOffer, getOffersByListing, getOffersByBuyer, updateOfferStatus, getOfferById } from '../controllers/offerController.js';
+// Import all specific functions from offerController.js
+import {
+  createOffer,
+  getOffersByListing,
+  getOffersByBuyer,
+  updateOfferStatus,
+  getOfferById,
+} from '../controllers/offerController.js'; // Corrected import path/name
 import { authenticate } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/authorizeMiddleware.js';
-
+import { authorizeRoles } from '../middleware/authorizeMiddleware.js'; // This path must be correct!
 
 const router = Router();
 
 // Authenticated routes
-router.use(authenticate);
+router.use(authenticate); // All routes below this will require authentication
 
-// Buyer/Admin routes
+// Buyer can create offers
 router.post('/', authorizeRoles(['buyer', 'admin']), createOffer);
+
+// Seller/Admin can view offers for their listings
+router.get('/listing/:listingId', authorizeRoles(['miner', 'admin']), getOffersByListing);
+
+// Buyer/Admin can view their own offers
 router.get('/my-offers', authorizeRoles(['buyer', 'admin']), getOffersByBuyer);
 
-// Seller/Admin routes
+// Seller/Admin can update offer status
 router.put('/:id/status', authorizeRoles(['miner', 'admin']), updateOfferStatus);
-router.get('/listing/:listingId', authorizeRoles(['miner', 'admin']), getOffersByListing);
+
+// Get a specific offer by ID (optional, but good for detail views)
 router.get('/:id', authorizeRoles(['buyer', 'miner', 'admin']), getOfferById);
 
-
-// Export the router as a named export
+// Export as a named export for app.ts
 export const offerRoutes = router;

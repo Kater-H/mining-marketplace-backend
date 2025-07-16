@@ -7,11 +7,11 @@ import { config } from './config/config.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { userRoutes } from './routes/userRoutes.js'; 
 // Corrected to named import for listingRoutes
-import { listingRoutes } from './routes/listingRoutes.js'; 
+import { listingRoutes } from './routes/listingRoutes.js'; // Corrected import path/name
 // Corrected to named import for paymentRoutes
 import { paymentRoutes } from './routes/paymentRoutes.js'; 
 // Corrected to named import for offerRoutes
-import { offerRoutes } from './routes/offerRoutes.js'; 
+import { offerRoutes } from './routes/offerRoutes.js'; // Corrected import path/name
 import { ApplicationError } from './utils/applicationError.js';
 
 const app = express();
