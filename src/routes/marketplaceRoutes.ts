@@ -1,38 +1,33 @@
+// src/routes/marketplaceRoutes.ts
 import { Router } from 'express';
+// Corrected imports from listingController.js (which is your marketplaceController)
 import {
-  getMineralListings,
-  getMineralListingById,
-  createMineralListing,
-  updateMineralListing,
-  deleteMineralListing,
-  createMineralOffer,
-  updateMineralOfferStatus,
-  getOffersForListing,
-  getOffersByBuyer,
-} from '../controllers/marketplaceController.js'; // Ensure .js is here
-import { authenticate, authorize } from '../middleware/authMiddleware.js'; // Ensure .js is here
-import { UserRole } from '../interfaces/user.js'; // Ensure .js is here
+  createListing,
+  getAllListings,
+  getListingById,
+  updateListing,
+  deleteListing,
+  getListingsBySeller,
+} from '../controllers/listingController.js'; // Corrected to listingController.js
+import { authenticate } from '../middleware/authMiddleware.js';
+import { authorizeRoles } from '../middleware/authorizeMiddleware.js'; // This path must be correct!
 
 const router = Router();
 
-// Public routes (anyone can view listings)
-router.get('/listings', getMineralListings); // Handles /api/marketplace/listings (all listings)
-
-// CHANGED: Path from '/:id' to '/listings/:id' to correctly match /api/marketplace/listings/:id
-router.get('/listings/:id', getMineralListingById); // Handles /api/marketplace/listings/:id (single listing)
+// Public routes (no authentication needed to view listings)
+router.get('/', getAllListings);
+router.get('/:id', getListingById);
 
 // Authenticated routes
-router.use(authenticate); // Apply authentication to all routes below this point
+router.use(authenticate); // All routes below this will require authentication
 
-// Seller/Admin routes
-router.post('/listings', authorize('seller', 'admin'), createMineralListing);
-router.put('/listings/:id', authorize('seller', 'admin'), updateMineralListing);
-router.delete('/listings/:id', authorize('seller', 'admin'), deleteMineralListing);
+// Seller-specific routes (only 'miner' and 'admin' roles can manage listings)
+router.post('/', authorizeRoles(['miner', 'admin']), createListing);
+router.put('/:id', authorizeRoles(['miner', 'admin']), updateListing);
+router.delete('/:id', authorizeRoles(['miner', 'admin']), deleteListing);
 
-// Offer routes
-router.post('/offers', authorize('buyer'), createMineralOffer);
-router.put('/offers/:id/status', authorize('seller', 'admin'), updateMineralOfferStatus);
-router.get('/listings/:id/offers', authorize('seller', 'admin'), getOffersForListing);
-router.get('/offers/my-offers', authorize('buyer'), getOffersByBuyer);
+// Get listings by the authenticated seller (miner/admin)
+router.get('/my-listings/seller', authorizeRoles(['miner', 'admin']), getListingsBySeller);
 
-export default router;
+// Export as a named export for app.ts
+export const marketplaceRoutes = router; // Export as marketplaceRoutes
