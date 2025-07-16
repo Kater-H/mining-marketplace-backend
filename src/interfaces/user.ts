@@ -1,5 +1,6 @@
 // src/interfaces/user.ts
-export type UserRole = 'buyer' | 'miner' | 'admin';
+// UPDATED: Added 'seller' to UserRole
+export type UserRole = 'buyer' | 'miner' | 'admin' | 'seller';
 
 export interface UserRegistrationData {
   firstName: string;
@@ -7,25 +8,23 @@ export interface UserRegistrationData {
   email: string;
   password: string;
   role: UserRole;
-  companyName?: string; // Optional on frontend
-  phoneNumber?: string; // Optional on frontend
+  companyName?: string;
+  phoneNumber?: string;
 }
 
 export interface User {
   id: number;
-  first_name: string; // Matches DB column name
-  last_name: string;  // Matches DB column name
+  first_name: string;
+  last_name: string;
   email: string;
-  password?: string; // Only present for registration/login, not stored/returned
+  password?: string;
   role: UserRole;
   email_verified: boolean;
-  verification_token?: string; // For email verification
-  created_at: string; // Changed to string, as PG typically returns ISO strings
-  updated_at: string; // Changed to string
-  company_name?: string; // Still optional in interface, but backend won't query it
-  phone_number?: string; // Still optional in interface, but backend won't query it
+  verification_token?: string;
+  created_at: string;
+  updated_at: string;
+  company_name?: string;
+  phone_number?: string;
 }
 
-// This interface is for the user object returned *after* login/profile fetch,
-// which typically omits sensitive fields like password and verification token.
 export type UserLoginResponse = Omit<User, 'password' | 'verification_token'>;
