@@ -1,23 +1,33 @@
-// Example placeholder for Discord notification
-import { Client, GatewayIntentBits } from 'discord.js'; // Added import
+// src/config/monitoring/notification.ts
+// import { Client, GatewayIntentBits } from 'discord.js'; // Commented out to resolve TS2307 error
+// import { config } from '../config/config.js';
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] }); // Basic client setup
+// // Initialize Discord client (if Discord notifications are enabled)
+// const discordClient = config.discordBotToken ? new Client({ intents: [GatewayIntentBits.Guilds] }) : null;
 
-client.on('ready', () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
-});
+// if (discordClient) {
+//   discordClient.on('ready', () => {
+//     console.log(`Logged in as ${discordClient.user?.tag}!`);
+//   });
 
-// Assuming you have a Discord bot token in your .env
-// client.login(process.env.DISCORD_BOT_TOKEN);
+//   discordClient.login(config.discordBotToken);
+// }
 
-export const sendDiscordNotification = (message: string, channelId: string): void => {
-  // const channel = client.channels.cache.get(channelId);
-  // if (channel && channel.isTextBased()) {
-  //   channel.send(message).catch(console.error);
-  // } else {
-  //   console.warn(`Discord channel ${channelId} not found or not a text channel.`);
-  // }
-  console.log(`[DISCORD NOTIFICATION - MOCKED] Sending to channel ${channelId}: ${message}`);
-};
+// export const sendDiscordNotification = async (message: string) => {
+//   if (!discordClient || !config.discordChannelId) {
+//     console.warn('Discord client not initialized or channel ID not set. Skipping Discord notification.');
+//     return;
+//   }
 
-// Add other notification methods if needed
+//   try {
+//     const channel = await discordClient.channels.fetch(config.discordChannelId);
+//     if (channel?.isTextBased()) {
+//       await channel.send(message);
+//       console.log('Discord notification sent successfully.');
+//     } else {
+//       console.warn('Discord channel is not a text channel or not found.');
+//     }
+//   } catch (error) {
+//     console.error('Failed to send Discord notification:', error);
+//   }
+// };

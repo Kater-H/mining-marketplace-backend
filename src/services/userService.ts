@@ -1,202 +1,119 @@
 // src/services/userService.ts
+import { pgPool as pool } from '../config/database.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { pgPool as pool } from '../config/database.js';
 import { config } from '../config/config.js';
-import { User, UserRole } from '../interfaces/user.js';
 import { ApplicationError } from '../utils/applicationError.js';
+import { BackendUser } from '../interfaces/user.js'; // Import BackendUser interface
 
-// User service class
 export class UserService {
   private pool = pool;
-  private readonly JWT_SECRET = config.jwtSecret;
-  // private readonly EMAIL_VERIFICATION_SECRET = config.jwtSecret; // No longer needed
 
   // Register a new user
-  async registerUser(firstName: string, lastName: string, email: string, password: string, role: UserRole): Promise<User> {
+  async registerUser(userData: any): Promise<{ user: BackendUser; token: string }> {
+    const { firstName, lastName, email, password, role } = userData;
+
+    // Check if user already exists
+    const existingUser = await this.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+      throw new ApplicationError('User with this email already exists.', 409);
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    // const emailVerificationToken = jwt.sign({ email }, this.EMAIL_VERIFICATION_SECRET, { expiresIn: '1d' }); // No longer needed
-    // const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // No longer needed
 
-    try {
-      const result = await this.pool.query(
-        `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verified)
-         VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`, // email_verified set to TRUE directly
-        [firstName, lastName, email, hashedPassword, role]
-      );
-      const newUser = result.rows[0];
+    // Insert new user into database, including default compliance_status
+    const result = await this.pool.query(
+      `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verified, compliance_status)
+       VALUES ($1, $2, $3, $4, $5, FALSE, 'pending') RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
+      [firstName, lastName, email, hashedPassword, role]
+    );
 
-      // console.log(`Email verification link for ${email}: /api/users/verify-email/${emailVerificationToken}`); // No longer needed
+    const newUser: BackendUser = result.rows[0];
 
-      return {
-        id: newUser.id,
-        email: newUser.email,
-        password: '',
-        role: newUser.role,
-        first_name: newUser.first_name,
-        last_name: newUser.last_name,
-        email_verified: newUser.email_verified,
-        // verification_token: newUser.email_verification_token, // No longer needed
-        created_at: newUser.created_at,
-        updated_at: newUser.updated_at,
-      };
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ApplicationError('Email already registered.', 409);
-      }
-      throw new ApplicationError('Failed to register user.', 500, error as Error);
-    }
+    // Generate JWT token - Explicitly cast secret and expiresIn type
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email, roles: [newUser.role] },
+      config.jwtSecret as string, // Ensure secret is treated as string
+      { expiresIn: config.jwtExpiresIn as string | number } // Ensure expiresIn type is compatible
+    );
+
+    return { user: newUser, token };
   }
-
-  // REMOVED: verifyEmail method is no longer needed
-  /*
-  async verifyEmail(token: string): Promise<void> {
-    try {
-      const decoded: any = jwt.verify(token, this.EMAIL_VERIFICATION_SECRET);
-      const { email } = decoded;
-
-      const result = await this.pool.query(
-        `UPDATE users SET email_verified = TRUE, email_verification_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE email = $1 AND email_verification_token = $2 RETURNING id`,
-        [email, token]
-      );
-
-      if (result.rowCount === 0) {
-        throw new ApplicationError('Invalid or expired verification token.', 400);
-      }
-    } catch (error: any) {
-      if (error.name === 'TokenExpiredError') {
-        throw new ApplicationError('Email verification token has expired.', 400);
-      }
-      if (error.name === 'JsonWebTokenError') {
-        throw new ApplicationError('Invalid email verification token.', 400);
-      }
-      throw new ApplicationError('Failed to verify email.', 500, error as Error);
-    }
-  }
-  */
 
   // Login user
-  async loginUser(email: string, password: string): Promise<{ user: Omit<User, 'password' | 'verification_token'>; token: string }> {
-    const result = await this.pool.query('SELECT id, first_name, last_name, email, password_hash, role, email_verified, created_at, updated_at FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
+  async loginUser(email: string, password: string): Promise<{ user: BackendUser; token: string }> {
+    const result = await this.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user: BackendUser = result.rows[0];
 
     if (!user) {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
+    // Access password_hash from the user object
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    // REMOVED: No longer checking email_verified during login
-    /*
-    if (!user.email_verified) {
-      throw new ApplicationError('Please verify your email before logging in.', 403);
-    }
-    */
-
+    // Generate JWT token - Explicitly cast secret and expiresIn type
     const token = jwt.sign(
       { id: user.id, email: user.email, roles: [user.role] },
-      this.JWT_SECRET,
-      { expiresIn: config.jwtExpiresIn }
+      config.jwtSecret as string, // Ensure secret is treated as string
+      { expiresIn: config.jwtExpiresIn as string | number } // Ensure expiresIn type is compatible
     );
 
-    const userForFrontend: Omit<User, 'password' | 'verification_token'> = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email_verified: user.email_verified,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-    };
-
-    return { user: userForFrontend, token };
+    return { user, token };
   }
 
-  // Get User Profile by ID
-  async getUserProfile(userId: number): Promise<Omit<User, 'password' | 'verification_token'> | null> {
-    try {
-      const result = await this.pool.query(
-        `SELECT id, first_name, last_name, email, role, email_verified, created_at, updated_at
-         FROM users WHERE id = $1`,
-        [userId]
-      );
-      if (result.rows.length === 0) {
-        return null;
-      }
-      const user = result.rows[0];
-      return {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email_verified: user.email_verified,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-      };
-    } catch (error) {
-      throw new ApplicationError('Failed to retrieve user profile.', 500, error as Error);
+  // Get user profile by ID
+  async getUserProfile(userId: number): Promise<BackendUser | null> {
+    const result = await this.pool.query(
+      `SELECT id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return null;
     }
+    return result.rows[0];
   }
 
-  // Update User Profile
-  async updateUserProfile(userId: number, updates: { firstName?: string; lastName?: string; email?: string }): Promise<Omit<User, 'password' | 'verification_token'> | null> {
-    const fields: string[] = [];
-    const values: any[] = [];
-    let queryIndex = 1;
+  // Update user profile
+  async updateUserProfile(userId: number, updateData: Partial<BackendUser>): Promise<BackendUser> {
+    const { first_name, last_name, email } = updateData;
 
-    if (updates.firstName !== undefined) {
-      fields.push(`first_name = $${queryIndex++}`);
-      values.push(updates.firstName);
-    }
-    if (updates.lastName !== undefined) {
-      fields.push(`last_name = $${queryIndex++}`);
-      values.push(updates.lastName);
-    }
-    if (updates.email !== undefined) {
-      const checkEmailQuery = `SELECT id FROM users WHERE email = $1 AND id != $2`;
-      const emailCheckResult = await this.pool.query(checkEmailQuery, [updates.email, userId]);
-      if (emailCheckResult.rows.length > 0) {
-        throw new ApplicationError('Email already in use by another account.', 409);
-      }
-      fields.push(`email = $${queryIndex++}`);
-      values.push(updates.email);
-    }
+    const result = await this.pool.query(
+      `UPDATE users
+       SET first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           email = COALESCE($3, email),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
+      [first_name, last_name, email, userId]
+    );
 
-    if (fields.length === 0) {
-      return this.getUserProfile(userId);
+    if (result.rows.length === 0) {
+      throw new ApplicationError('User not found.', 404);
     }
+    return result.rows[0];
+  }
 
-    fields.push(`updated_at = CURRENT_TIMESTAMP`);
-    values.push(userId);
+  // Method to update a user's compliance status (Admin-only)
+  async updateUserComplianceStatus(userId: number, status: 'pending' | 'compliant' | 'non_compliant'): Promise<BackendUser> {
+    const result = await this.pool.query(
+      `UPDATE users
+       SET compliance_status = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
+      [status, userId]
+    );
 
-    try {
-      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${queryIndex} RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`;
-      const result = await this.pool.query(query, values);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-      const updatedUser = result.rows[0];
-      return {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        first_name: updatedUser.first_name,
-        last_name: updatedUser.last_name,
-        email_verified: updatedUser.email_verified,
-        created_at: updatedUser.created_at,
-        updated_at: updatedUser.updated_at,
-      };
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ApplicationError('Email already in use.', 409);
-      }
-      throw new ApplicationError('Failed to update user profile.', 500, error as Error);
+    if (result.rows.length === 0) {
+      throw new ApplicationError('User not found.', 404);
     }
+    return result.rows[0];
   }
 }
