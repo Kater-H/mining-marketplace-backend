@@ -3,23 +3,19 @@ import {
   registerUser,
   verifyUserEmail,
   loginUser,
-  getUserProfile,
-  updateUserProfile
-} from '../controllers/userController.js'; // Ensure .js is here
-import { authenticate } from '../middleware/authMiddleware.js'; // Ensure .js is here
+  getUserProfile, // New import
+  updateUserProfile, // New import
+} from '../controllers/userController.js'; // Ensure .js
+import { authenticate } from '../middleware/authMiddleware.js'; // Ensure .js
 
 const router = Router();
 
-// Public routes
 router.post('/register', registerUser);
-router.get('/verify-email', verifyUserEmail);
+router.get('/verify-email/:token', verifyUserEmail); // Changed to param in controller
 router.post('/login', loginUser);
 
-// Authenticated routes
-router.use(authenticate); // Apply authentication to all routes below this point
-
-router.get('/profile', getUserProfile);
-router.put('/profile', updateUserProfile);
-
+// New: Profile routes - require authentication
+router.get('/profile', authenticate, getUserProfile);
+router.put('/profile', authenticate, updateUserProfile);
 
 export const userRoutes = router;

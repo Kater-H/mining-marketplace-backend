@@ -1,297 +1,199 @@
-// CHANGED: Import jsonwebtoken as a default import for ES Modules compatibility
-import jwt from 'jsonwebtoken'; // Changed from * as jwt
 import bcrypt from 'bcryptjs'; // External module, no .js
-import { Pool } from 'pg'; // External module, no .js
-import { getPool } from '../config/database.js'; // Ensure .js is here
+import jwt from 'jsonwebtoken'; // External module, no .js
+import { pool } from '../config/database.js'; // Ensure .js is here
 import { config } from '../config/config.js'; // Ensure .js is here
+import { User, UserRole } from '../interfaces/user.js'; // Ensure .js - assuming this interface exists
+import { ApplicationError } from '../utils/applicationError.js'; // Ensure .js - assuming this utility exists
 
-// User service class - export as default to ensure consistent import pattern
-class UserService {
-  private pool: Pool;
-
-  constructor(userModel?: any) {
-    // Use provided pool (for testing) or get the appropriate pool
-    this.pool = userModel?.pool || getPool();
-  }
+// User service class
+export class UserService {
+  private pool = pool; // Use the imported pool directly
+  private readonly JWT_SECRET = config.jwtSecret;
+  private readonly EMAIL_VERIFICATION_SECRET = config.jwtSecret; // Using same secret for simplicity, but ideally separate
 
   // Register a new user
-  async registerUser(userData: any): Promise<any> {
+  async registerUser(firstName: string, lastName: string, email: string, password: string, role: UserRole): Promise<User> {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const emailVerificationToken = jwt.sign({ email }, this.EMAIL_VERIFICATION_SECRET, { expiresIn: '1d' });
+    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     try {
-      // Check if email already exists
-      const checkEmailQuery = `
-        SELECT id FROM users
-        WHERE email = $1
-      `;
-
-      const emailResult = await this.pool.query(checkEmailQuery, [userData.email]);
-
-      if (emailResult.rows.length > 0) {
-        throw new Error('Email already in use');
-      }
-
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(userData.password, salt);
-
-      // Generate verification token and its expiry time
-      const verificationToken = jwt.sign(
-        { email: userData.email },
-        config.jwtSecret,
-        { expiresIn: '24h' }
+      const result = await this.pool.query(
+        `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verification_token, verification_token_expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, email, role, email_verified, member_since`,
+        [firstName, lastName, email, hashedPassword, role, emailVerificationToken, verificationTokenExpiresAt]
       );
-      // Calculate expiry time for the token (24 hours from now)
-      const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const newUser: User = result.rows[0];
 
-      // Insert user
-      // Added 'verification_token_expires_at' to the INSERT columns and values
-      // 'is_verified' is omitted from INSERT as it has a DEFAULT FALSE in the schema
-      const insertUserQuery = `
-        INSERT INTO users (
-          first_name, last_name, email, password_hash, role, verification_token, verification_token_expires_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, first_name, last_name, email, role, is_verified, verification_token
-      `;
+      // In a real application, you would send an email here
+      console.log(`Email verification link for ${email}: /api/users/verify-email/${emailVerificationToken}`);
 
-      const role = userData.role || 'buyer'; // Default role is buyer
-
-      const userResult = await this.pool.query(insertUserQuery, [
-        userData.firstName,
-        userData.lastName,
-        userData.email,
-        hashedPassword,
-        role,
-        verificationToken,
-        verificationTokenExpiresAt // Value for verification_token_expires_at
-      ]);
-
-      const user = userResult.rows[0];
-
+      // Map snake_case to camelCase for frontend
       return {
-        user: {
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          email: user.email,
-          role: user.role,
-          isVerified: user.is_verified
-        },
-        verificationToken: user.verification_token
+        id: newUser.id,
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
+        email: newUser.email,
+        role: newUser.role,
+        emailVerified: newUser.email_verified,
+        memberSince: newUser.member_since // Assuming this comes from DB
       };
-    } catch (error) {
-      console.error('Error registering user:', error);
-      throw error;
+    } catch (error: any) {
+      if (error.code === '23505') { // Unique violation code
+        throw new ApplicationError('Email already registered.', 409);
+      }
+      throw new ApplicationError('Failed to register user.', 500, error);
     }
   }
 
   // Verify email with token
-  async verifyEmail(token: string): Promise<boolean> {
+  async verifyEmail(token: string): Promise<void> {
     try {
-      // Verify token
-      const decoded = jwt.verify(token, config.jwtSecret) as { email: string };
+      const decoded: any = jwt.verify(token, this.EMAIL_VERIFICATION_SECRET);
+      const { email } = decoded;
 
-      if (!decoded || !decoded.email) {
-        return false;
+      const result = await this.pool.query(
+        `UPDATE users SET email_verified = TRUE, email_verification_token = NULL WHERE email = $1 AND email_verification_token = $2 RETURNING id`,
+        [email, token]
+      );
+
+      if (result.rowCount === 0) {
+        throw new ApplicationError('Invalid or expired verification token.', 400);
       }
-
-      // Update user is_verified status
-      const updateQuery = `
-        UPDATE users
-        SET is_verified = true, updated_at = CURRENT_TIMESTAMP
-        WHERE email = $1
-        RETURNING id
-      `;
-
-      const result = await this.pool.query(updateQuery, [decoded.email]);
-
-      return result.rows.length > 0;
-    } catch (error) {
-      console.error('Error verifying email:', error);
-      return false;
+    } catch (error: any) {
+      if (error.name === 'TokenExpiredError') {
+        throw new ApplicationError('Email verification token has expired.', 400);
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw new ApplicationError('Invalid email verification token.', 400);
+      }
+      throw new ApplicationError('Failed to verify email.', 500, error);
     }
   }
 
   // Login user
-  async loginUser(email: string, password: string): Promise<any> {
-    try {
-      // Get user by email
-      const getUserQuery = `
-        SELECT id, first_name, last_name, email, password_hash, role, is_verified
-        FROM users
-        WHERE email = $1
-      `;
+  async loginUser(email: string, password: string): Promise<{ user: User; token: string }> {
+    const result = await this.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
 
-      const userResult = await this.pool.query(getUserQuery, [email]);
-
-      if (userResult.rows.length === 0) {
-        throw new Error('Invalid credentials');
-      }
-
-      const user = userResult.rows[0];
-
-      // Temporarily commented out email verification check for testing
-      // This allows users to log in immediately after registration without email verification.
-      // For production, this check should be active.
-      // if (!user.is_verified) {
-      //   throw new Error('Email not verified. Please verify your email before logging in.');
-      // }
-
-      // Compare passwords
-      const isMatch = await bcrypt.compare(password, user.password_hash);
-
-      if (!isMatch) {
-        throw new Error('Invalid credentials');
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        {
-          id: user.id,
-          email: user.email,
-          roles: [user.role] // Convert single role to array for middleware compatibility
-        },
-        config.jwtSecret,
-        { expiresIn: config.jwtExpiresIn }
-      );
-
-      return {
-        user: {
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          email: user.email,
-          role: user.role,
-          isVerified: user.is_verified
-        },
-        token
-      };
-    } catch (error) {
-      console.error('Error logging in user:', error);
-      throw error;
+    if (!user) {
+      throw new ApplicationError('Invalid credentials.', 401);
     }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      throw new ApplicationError('Invalid credentials.', 401);
+    }
+
+    if (!user.email_verified) {
+      throw new ApplicationError('Please verify your email before logging in.', 403);
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, roles: [user.role] },
+      this.JWT_SECRET,
+      { expiresIn: config.jwtExpiresIn }
+    );
+
+    // Return user object without password hash and verification token
+    const { password_hash, email_verification_token, verification_token_expires_at, ...userWithoutSensitiveData } = user;
+    
+    // Map snake_case to camelCase for frontend
+    const userForFrontend: User = {
+      id: userWithoutSensitiveData.id,
+      firstName: userWithoutSensitiveData.first_name,
+      lastName: userWithoutSensitiveData.last_name,
+      email: userWithoutSensitiveData.email,
+      role: userWithoutSensitiveData.role,
+      emailVerified: userWithoutSensitiveData.email_verified,
+      memberSince: userWithoutSensitiveData.member_since
+    };
+
+    return { user: userForFrontend, token };
   }
 
-  // Get user by ID
-  async getUserById(id: number): Promise<any> {
+  // New: Get User Profile by ID
+  async getUserProfile(userId: number): Promise<User | null> {
     try {
-      const query = `
-        SELECT id, first_name, last_name, email, role, is_verified
-        FROM users
-        WHERE id = $1
-      `;
-
-      const result = await this.pool.query(query, [id]);
-
+      const result = await this.pool.query(
+        `SELECT id, first_name, last_name, email, role, email_verified, member_since
+         FROM users WHERE id = $1`,
+        [userId]
+      );
       if (result.rows.length === 0) {
         return null;
       }
-
       const user = result.rows[0];
+      // Map snake_case to camelCase for frontend
       return {
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
         role: user.role,
-        isVerified: user.is_verified
+        emailVerified: user.email_verified,
+        memberSince: user.member_since
       };
     } catch (error) {
-      console.error('Error getting user by ID:', error);
-      throw error;
+      throw new ApplicationError('Failed to retrieve user profile.', 500, error);
     }
   }
 
-  // Update user
-  async updateUser(id: number, userData: any): Promise<any> {
+  // New: Update User Profile
+  async updateUserProfile(userId: number, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User | null> {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let queryIndex = 1;
+
+    if (updates.firstName !== undefined) {
+      fields.push(`first_name = $${queryIndex++}`);
+      values.push(updates.firstName);
+    }
+    if (updates.lastName !== undefined) {
+      fields.push(`last_name = $${queryIndex++}`);
+      values.push(updates.lastName);
+    }
+    if (updates.email !== undefined) {
+      // Check if new email already exists for another user
+      const checkEmailQuery = `SELECT id FROM users WHERE email = $1 AND id != $2`;
+      const emailCheckResult = await this.pool.query(checkEmailQuery, [updates.email, userId]);
+      if (emailCheckResult.rows.length > 0) {
+        throw new ApplicationError('Email already in use by another account.', 409);
+      }
+      fields.push(`email = $${queryIndex++}`);
+      values.push(updates.email);
+    }
+
+    if (fields.length === 0) {
+      return this.getUserProfile(userId); // No updates provided, return current profile
+    }
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`); // Always update timestamp
+    values.push(userId); // Add userId for the WHERE clause
+
     try {
-      // Check if user exists
-      const checkUserQuery = `
-        SELECT id FROM users
-        WHERE id = $1
-      `;
+      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${queryIndex} RETURNING id, first_name, last_name, email, role, email_verified, member_since`;
+      const result = await this.pool.query(query, values);
 
-      const userResult = await this.pool.query(checkUserQuery, [id]);
-
-      if (userResult.rows.length === 0) {
-        throw new Error('User not found');
+      if (result.rows.length === 0) {
+        return null; // User not found or no rows updated
       }
-
-      // Build update query
-      let updateQuery = 'UPDATE users SET ';
-      const queryParams: any[] = [];
-      let paramIndex = 1;
-
-      // Build dynamic update query
-      const updateFields: string[] = [];
-
-      if (userData.firstName) {
-        updateFields.push(`first_name = $${paramIndex++}`);
-        queryParams.push(userData.firstName);
+      const updatedUser = result.rows[0];
+      // Map snake_case to camelCase for frontend
+      return {
+        id: updatedUser.id,
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        emailVerified: updatedUser.email_verified,
+        memberSince: updatedUser.member_since
+      };
+    } catch (error: any) {
+      if (error.code === '23505') { // Unique violation code (e.g., duplicate email)
+        throw new ApplicationError('Email already in use.', 409);
       }
-
-      if (userData.lastName) {
-        updateFields.push(`last_name = $${paramIndex++}`);
-        queryParams.push(userData.lastName);
-      }
-
-      if (userData.email) {
-        // Check if email already exists for another user
-        const checkEmailQuery = `
-          SELECT id FROM users
-          WHERE email = $1 AND id != $2
-        `;
-
-        const emailResult = await this.pool.query(checkEmailQuery, [userData.email, id]);
-
-        if (emailResult.rows.length > 0) {
-          throw new Error('Email already in use');
-        }
-
-        updateFields.push(`email = $${paramIndex++}`);
-        queryParams.push(userData.email);
-      }
-
-      if (userData.password) {
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(userData.password, salt);
-
-        updateFields.push(`password_hash = $${paramIndex++}`);
-        queryParams.push(hashedPassword);
-      }
-
-      if (userData.role) {
-        updateFields.push(`role = $${paramIndex++}`);
-        queryParams.push(userData.role);
-      }
-
-      // Check if there are any fields to update before adding timestamp
-      if (updateFields.length === 0) {
-        // No fields to update
-        return { message: 'No fields to update' };
-      }
-
-      // Add updated_at timestamp
-      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
-
-      updateQuery += updateFields.join(', ');
-      updateQuery += ` WHERE id = $${paramIndex++}`;
-      queryParams.push(id);
-
-      updateQuery += ' RETURNING id, first_name, last_name, email, role';
-
-      // Execute update
-      const result = await this.pool.query(updateQuery, queryParams);
-
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
+      throw new ApplicationError('Failed to update user profile.', 500, error);
     }
   }
 }
-
-// Export as default for consistent import pattern
-export default UserService;
-// Also export as named export for backward compatibility
-export { UserService };

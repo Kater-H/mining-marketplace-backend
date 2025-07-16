@@ -1,90 +1,77 @@
-import { Request, Response } from 'express';
-import { UserService } from '../services/userService.js'; // ADDED .js
-import { UserRegistrationData, UserLoginResponse, UserRole } from '../interfaces/user.js'; // ADDED .js
+import { Request, Response, NextFunction } from 'express';
+import { UserService } from '../services/userService.js'; // Ensure .js
+import { UserRole } from '../interfaces/user.js'; // Ensure .js - assuming this interface exists
 
 const userService = new UserService();
 
 // Register a new user
-export const registerUser = async (req: Request, res: Response): Promise<void> => {
+export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userData: UserRegistrationData = req.body;
-    const { user, verificationToken } = await userService.registerUser(userData);
-    res.status(201).json({
-      message: 'User registered successfully. Please check your email for verification.',
-      user,
-      verificationToken // In a real app, you might not send this back to the client directly
-    });
+    const { firstName, lastName, email, password, role } = req.body;
+    // Assuming registerUser in service now takes individual fields and returns a user object
+    const user = await userService.registerUser(firstName, lastName, email, password, role as UserRole);
+    res.status(201).json({ message: 'User registered successfully. Please verify your email.', user: { id: user.id, email: user.email, role: user.role } });
   } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(400).json({ message: (error as Error).message });
+    next(error); // Pass error to the error handling middleware
   }
 };
 
 // Verify user email
-export const verifyUserEmail = async (req: Request, res: Response): Promise<void> => {
+export const verifyUserEmail = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.query;
+    const { token } = req.params; // Changed from req.query to req.params as per common practice for tokens in URL path
     if (!token || typeof token !== 'string') {
-      res.status(400).json({ message: 'Verification token is missing or invalid.' });
-      return;
+      return res.status(400).json({ message: 'Verification token is missing or invalid.' });
     }
-
-    const success = await userService.verifyEmail(token);
-    if (success) {
-      res.status(200).json({ message: 'Email verified successfully!' });
-    } else {
-      res.status(400).json({ message: 'Invalid or expired verification token.' });
-    }
+    await userService.verifyEmail(token); // Service handles success/failure
+    res.status(200).json({ message: 'Email verified successfully!' });
   } catch (error) {
-    console.error('Error verifying email:', error);
-    res.status(500).json({ message: 'Failed to verify email.', error: (error as Error).message });
+    next(error); // Pass error to the error handling middleware
   }
 };
 
 // Login user
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
+export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      res.status(400).json({ message: 'Email and password are required.' });
-      return;
+      return res.status(400).json({ message: 'Email and password are required.' });
     }
     const { user, token } = await userService.loginUser(email, password);
     res.status(200).json({ message: 'Login successful', user, token });
   } catch (error) {
-    console.error('Error logging in user:', error);
-    res.status(401).json({ message: (error as Error).message });
+    next(error); // Pass error to the error handling middleware
   }
 };
 
 // Get user profile
-export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user.id; // User ID from authenticated token
-    const user = await userService.getUserById(userId);
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+    // req.user is populated by the authenticate middleware
+    const userId = req.user!.id; // Use non-null assertion as middleware ensures it's present
+    const userProfile = await userService.getUserProfile(userId);
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User profile not found.' });
     }
-    res.status(200).json(user);
+    res.status(200).json(userProfile);
   } catch (error) {
-    console.error('Error getting user profile:', error);
-    res.status(500).json({ message: 'Failed to retrieve user profile', error: (error as Error).message });
+    console.error('Error getting user profile:', error); // Keep for debugging specific controller errors
+    next(error); // Pass error to the error handling middleware
   }
 };
 
 // Update user profile
-export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
+export const updateUserProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user.id; // User ID from authenticated token
-    const updatedUser = await userService.updateUser(userId, req.body);
+    const userId = req.user!.id; // User ID from authenticated token
+    const { firstName, lastName, email } = req.body; // Fields allowed to be updated
+    const updatedUser = await userService.updateUserProfile(userId, { firstName, lastName, email });
     if (!updatedUser) {
-      res.status(404).json({ message: 'User not found or no updates applied.' });
-      return;
+      return res.status(404).json({ message: 'User not found or no updates applied.' });
     }
     res.status(200).json({ message: 'User profile updated successfully', user: updatedUser });
   } catch (error) {
-    console.error('Error updating user profile:', error);
-    res.status(500).json({ message: 'Failed to update user profile', error: (error as Error).message });
+    console.error('Error updating user profile:', error); // Keep for debugging specific controller errors
+    next(error); // Pass error to the error handling middleware
   }
 };
