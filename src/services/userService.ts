@@ -3,30 +3,30 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pgPool as pool } from '../config/database.js';
 import { config } from '../config/config.js';
-import { User, UserRole, UserRegistrationData } from '../interfaces/user.js';
+import { User, UserRole } from '../interfaces/user.js';
 import { ApplicationError } from '../utils/applicationError.js';
 
 // User service class
 export class UserService {
   private pool = pool;
   private readonly JWT_SECRET = config.jwtSecret;
-  private readonly EMAIL_VERIFICATION_SECRET = config.jwtSecret;
+  // private readonly EMAIL_VERIFICATION_SECRET = config.jwtSecret; // No longer needed
 
   // Register a new user
   async registerUser(firstName: string, lastName: string, email: string, password: string, role: UserRole): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const emailVerificationToken = jwt.sign({ email }, this.EMAIL_VERIFICATION_SECRET, { expiresIn: '1d' });
-    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // const emailVerificationToken = jwt.sign({ email }, this.EMAIL_VERIFICATION_SECRET, { expiresIn: '1d' }); // No longer needed
+    // const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // No longer needed
 
     try {
       const result = await this.pool.query(
-        `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`, // Removed company_name, phone_number
-        [firstName, lastName, email, hashedPassword, role, emailVerificationToken, verificationTokenExpiresAt]
+        `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verified)
+         VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`, // email_verified set to TRUE directly
+        [firstName, lastName, email, hashedPassword, role]
       );
       const newUser = result.rows[0];
 
-      console.log(`Email verification link for ${email}: /api/users/verify-email/${emailVerificationToken}`);
+      // console.log(`Email verification link for ${email}: /api/users/verify-email/${emailVerificationToken}`); // No longer needed
 
       return {
         id: newUser.id,
@@ -36,11 +36,9 @@ export class UserService {
         first_name: newUser.first_name,
         last_name: newUser.last_name,
         email_verified: newUser.email_verified,
-        verification_token: newUser.email_verification_token,
+        // verification_token: newUser.email_verification_token, // No longer needed
         created_at: newUser.created_at,
         updated_at: newUser.updated_at,
-        // company_name: newUser.company_name, // Removed
-        // phone_number: newUser.phone_number, // Removed
       };
     } catch (error: any) {
       if (error.code === '23505') {
@@ -50,7 +48,8 @@ export class UserService {
     }
   }
 
-  // Verify email with token
+  // REMOVED: verifyEmail method is no longer needed
+  /*
   async verifyEmail(token: string): Promise<void> {
     try {
       const decoded: any = jwt.verify(token, this.EMAIL_VERIFICATION_SECRET);
@@ -74,10 +73,11 @@ export class UserService {
       throw new ApplicationError('Failed to verify email.', 500, error as Error);
     }
   }
+  */
 
   // Login user
   async loginUser(email: string, password: string): Promise<{ user: Omit<User, 'password' | 'verification_token'>; token: string }> {
-    const result = await this.pool.query('SELECT id, first_name, last_name, email, password_hash, role, email_verified, created_at, updated_at FROM users WHERE email = $1', [email]); // Removed company_name, phone_number
+    const result = await this.pool.query('SELECT id, first_name, last_name, email, password_hash, role, email_verified, created_at, updated_at FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
     if (!user) {
@@ -89,9 +89,12 @@ export class UserService {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
+    // REMOVED: No longer checking email_verified during login
+    /*
     if (!user.email_verified) {
       throw new ApplicationError('Please verify your email before logging in.', 403);
     }
+    */
 
     const token = jwt.sign(
       { id: user.id, email: user.email, roles: [user.role] },
@@ -108,8 +111,6 @@ export class UserService {
       email_verified: user.email_verified,
       created_at: user.created_at,
       updated_at: user.updated_at,
-      // company_name: user.company_name, // Removed
-      // phone_number: user.phone_number, // Removed
     };
 
     return { user: userForFrontend, token };
@@ -120,7 +121,7 @@ export class UserService {
     try {
       const result = await this.pool.query(
         `SELECT id, first_name, last_name, email, role, email_verified, created_at, updated_at
-         FROM users WHERE id = $1`, // Removed company_name, phone_number
+         FROM users WHERE id = $1`,
         [userId]
       );
       if (result.rows.length === 0) {
@@ -136,8 +137,6 @@ export class UserService {
         email_verified: user.email_verified,
         created_at: user.created_at,
         updated_at: user.updated_at,
-        // company_name: user.company_name, // Removed
-        // phone_number: user.phone_number, // Removed
       };
     } catch (error) {
       throw new ApplicationError('Failed to retrieve user profile.', 500, error as Error);
@@ -176,7 +175,7 @@ export class UserService {
     values.push(userId);
 
     try {
-      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${queryIndex} RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`; // Removed company_name, phone_number
+      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${queryIndex} RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at`;
       const result = await this.pool.query(query, values);
 
       if (result.rows.length === 0) {
@@ -192,8 +191,6 @@ export class UserService {
         email_verified: updatedUser.email_verified,
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,
-        // company_name: updatedUser.company_name, // Removed
-        // phone_number: updatedUser.phone_number, // Removed
       };
     } catch (error: any) {
       if (error.code === '23505') {
