@@ -1,21 +1,23 @@
-import { Router } from 'express';
-import {
-  registerUser,
-  verifyUserEmail,
-  loginUser,
-  getUserProfile, // New import
-  updateUserProfile, // New import
-} from '../controllers/userController.js'; // Ensure .js
-import { authenticate } from '../middleware/authMiddleware.js'; // Ensure .js
+    // src/routes/userRoutes.ts
+    import { Router } from 'express';
+    import {
+      registerUser,
+      verifyUserEmail,
+      loginUser,
+      getUserProfile,
+      updateUserProfile,
+    } from '../controllers/userController.js';
+    import { authenticate } from '../middleware/authMiddleware.js'; // Ensure .js is here
 
-const router = Router();
+    const router = Router();
 
-router.post('/register', registerUser);
-router.get('/verify-email/:token', verifyUserEmail); // Changed to param in controller
-router.post('/login', loginUser);
+    router.post('/register', registerUser);
+    router.get('/verify-email/:token', verifyUserEmail); // Changed to use URL parameter
+    router.post('/login', loginUser);
 
-// New: Profile routes - require authentication
-router.get('/profile', authenticate, getUserProfile);
-router.put('/profile', authenticate, updateUserProfile);
+    // Profile routes - require authentication
+    router.get('/profile', authenticate, getUserProfile);
+    router.put('/profile', authenticate, updateUserProfile);
 
-export const userRoutes = router;
+    export const userRoutes = router;
+    
