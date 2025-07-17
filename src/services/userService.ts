@@ -1,7 +1,7 @@
 // src/services/userService.ts
 import { pgPool as pool } from '../config/database.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'; // Ensure jsonwebtoken is imported
+import jwt, { Secret, SignOptions } from 'jsonwebtoken'; // Import Secret and SignOptions
 import { config } from '../config/config.js';
 import { ApplicationError } from '../utils/applicationError.js';
 import { BackendUser } from '../interfaces/user.js'; 
@@ -31,11 +31,11 @@ export class UserService {
 
     const newUser: BackendUser = result.rows[0];
 
-    // Generate JWT token - Explicitly cast secret and expiresIn to string
+    // Generate JWT token - Use jwt.Secret for secret and SignOptions['expiresIn'] for expiresIn
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, roles: [newUser.role] },
-      config.jwtSecret as jwt.Secret, // Assert as jwt.Secret type
-      { expiresIn: config.jwtExpiresIn as string } // Assert as string
+      config.jwtSecret as Secret, // Assert as jwt.Secret
+      { expiresIn: config.jwtExpiresIn as SignOptions['expiresIn'] } // Assert using SignOptions type
     );
 
     return { user: newUser, token };
@@ -55,11 +55,11 @@ export class UserService {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    // Generate JWT token - Explicitly cast secret and expiresIn to string
+    // Generate JWT token - Use jwt.Secret for secret and SignOptions['expiresIn'] for expiresIn
     const token = jwt.sign(
       { id: user.id, email: user.email, roles: [user.role] },
-      config.jwtSecret as jwt.Secret, // Assert as jwt.Secret type
-      { expiresIn: config.jwtExpiresIn as string } // Assert as string
+      config.jwtSecret as Secret, // Assert as jwt.Secret
+      { expiresIn: config.jwtExpiresIn as SignOptions['expiresIn'] } // Assert using SignOptions type
     );
 
     return { user, token };
