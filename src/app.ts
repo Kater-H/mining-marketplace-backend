@@ -6,11 +6,8 @@ import morgan from 'morgan';
 import { config } from './config/config.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { userRoutes } from './routes/userRoutes.js'; 
-// Corrected to named import for marketplaceRoutes
 import { marketplaceRoutes } from './routes/marketplaceRoutes.js'; 
-// Corrected to named import for paymentRoutes
-import { paymentRoutes } from './routes/paymentRoutes.js'; 
-// Corrected to named import for offerRoutes
+import paymentRoutes from './routes/paymentRoutes.js'; // Corrected: Import as default
 import { offerRoutes } from './routes/offerRoutes.js'; 
 import { ApplicationError } from './utils/applicationError.js';
 
@@ -51,9 +48,9 @@ app.use(cors({
 
 // Routes
 app.use('/api/users', userRoutes); 
-app.use('/api/marketplace/listings', marketplaceRoutes); // Using named import
-app.use('/api/marketplace/offers', offerRoutes); // Using named import
-app.use('/api/payments', paymentRoutes); // Using named import
+app.use('/api/marketplace/listings', marketplaceRoutes); 
+app.use('/api/marketplace/offers', offerRoutes); 
+app.use('/api/payments', paymentRoutes); // Use as default import
 
 // Health Check Route
 app.get('/api/health', (req, res) => {
