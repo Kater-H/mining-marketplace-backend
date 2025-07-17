@@ -1,7 +1,7 @@
 // src/services/userService.ts
 import { pgPool as pool } from '../config/database.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken'; // Ensure jsonwebtoken is imported
 import { config } from '../config/config.js';
 import { ApplicationError } from '../utils/applicationError.js';
 import { BackendUser } from '../interfaces/user.js'; 
@@ -34,8 +34,8 @@ export class UserService {
     // Generate JWT token - Explicitly cast secret and expiresIn to string
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, roles: [newUser.role] },
-      config.jwtSecret, // No explicit 'as string' needed here if config.jwtSecret is already string
-      { expiresIn: config.jwtExpiresIn } // No explicit 'as string' needed here if config.jwtExpiresIn is already string
+      config.jwtSecret as jwt.Secret, // Assert as jwt.Secret type
+      { expiresIn: config.jwtExpiresIn as string } // Assert as string
     );
 
     return { user: newUser, token };
@@ -58,8 +58,8 @@ export class UserService {
     // Generate JWT token - Explicitly cast secret and expiresIn to string
     const token = jwt.sign(
       { id: user.id, email: user.email, roles: [user.role] },
-      config.jwtSecret, // No explicit 'as string' needed here if config.jwtSecret is already string
-      { expiresIn: config.jwtExpiresIn } // No explicit 'as string' needed here if config.jwtExpiresIn is already string
+      config.jwtSecret as jwt.Secret, // Assert as jwt.Secret type
+      { expiresIn: config.jwtExpiresIn as string } // Assert as string
     );
 
     return { user, token };
