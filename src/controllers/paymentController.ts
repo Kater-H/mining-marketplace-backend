@@ -30,9 +30,11 @@ export const createCheckoutSession = async (req: Request, res: Response, next: N
     const { listing_id, offer_id, seller_id, mineralType, final_price, final_quantity, currency } = req.body;
     const buyer_id = req.user!.id; // Get buyer ID from authenticated user
 
-    // Validate minimum amount for Stripe
+    // Define minimum amounts with explicit type
+    const minimumAmounts: { [key: string]: number } = { 'USD': 50, 'GBP': 30, 'EUR': 30 };
+    // Access minimum amount safely, defaulting to 50 cents if currency is not found
+    const minimumAmount = minimumAmounts[currency.toUpperCase()] || 50; 
     const amountInCents = Math.round(final_price * 100); // Convert to cents
-    const minimumAmount = { 'USD': 50, 'GBP': 30, 'EUR': 30 }[currency.toUpperCase()] || 50; // Minimum 0.50 USD, 0.30 GBP/EUR
 
     if (amountInCents < minimumAmount) {
       throw new ApplicationError(`Payment amount must be at least ${currency} ${(minimumAmount / 100).toFixed(2)} due to payment gateway minimums.`, 400);
