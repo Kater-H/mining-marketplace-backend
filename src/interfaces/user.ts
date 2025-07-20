@@ -9,8 +9,8 @@ export interface User {
   role: 'buyer' | 'miner' | 'admin';
   emailVerified: boolean;
   memberSince: string; // Assuming a string date like "January 15, 2024"
-  companyName?: string;
-  phoneNumber?: string;
+  // companyName?: string; // Removed
+  // phoneNumber?: string; // Removed
   complianceStatus: 'pending' | 'compliant' | 'non_compliant'; 
 }
 
@@ -25,7 +25,7 @@ export interface BackendUser {
   email_verified: boolean;
   created_at: string;
   updated_at: string;
-  company_name?: string;
-  phone_number?: string;
+  // company_name?: string; // Removed
+  // phone_number?: string; // Removed
   compliance_status: 'pending' | 'compliant' | 'non_compliant';
 }

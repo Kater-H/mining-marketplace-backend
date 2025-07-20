@@ -14,6 +14,8 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   role: Joi.string().valid('buyer', 'miner', 'admin').default('buyer'),
+  // companyName: Joi.string().trim().max(100).optional().allow(''), // Removed
+  // phoneNumber: Joi.string().trim().max(20).optional().allow(''), // Removed
 });
 
 // Joi schema for user login validation
@@ -27,6 +29,8 @@ const profileUpdateSchema = Joi.object({
   firstName: Joi.string().trim().min(2).max(50).optional(),
   lastName: Joi.string().trim().min(2).max(50).optional(),
   email: Joi.string().email().optional(),
+  // companyName: Joi.string().trim().max(100).optional().allow(''), // Removed
+  // phoneNumber: Joi.string().trim().max(20).optional().allow(''), // Removed
 });
 
 // Joi schema for compliance status update (Admin-only)
@@ -53,8 +57,8 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       emailVerified: user.email_verified,
       memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      companyName: user.company_name,
-      phoneNumber: user.phone_number,
+      // companyName: user.company_name, // Removed
+      // phoneNumber: user.phone_number, // Removed
       complianceStatus: user.compliance_status, // Include compliance status
     };
 
@@ -84,8 +88,8 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
       role: user.role,
       emailVerified: user.email_verified,
       memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      companyName: user.company_name,
-      phoneNumber: user.phone_number,
+      // companyName: user.company_name, // Removed
+      // phoneNumber: user.phone_number, // Removed
       complianceStatus: user.compliance_status, // Include compliance status
     };
 
@@ -114,8 +118,8 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
       role: user.role,
       emailVerified: user.email_verified,
       memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      companyName: user.company_name,
-      phoneNumber: user.phone_number,
+      // companyName: user.company_name, // Removed
+      // phoneNumber: user.phone_number, // Removed
       complianceStatus: user.compliance_status, // Include compliance status
     };
 
@@ -139,6 +143,8 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       first_name: value.firstName,
       last_name: value.lastName,
       email: value.email,
+      // company_name: value.companyName, // Removed
+      // phone_number: value.phoneNumber, // Removed
     };
 
     const updatedUser = await userService.updateUserProfile(userId, updateData);
@@ -152,8 +158,8 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       role: updatedUser.role,
       emailVerified: updatedUser.email_verified,
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
-      companyName: updatedUser.company_name,
-      phoneNumber: updatedUser.phone_number,
+      // companyName: updatedUser.company_name, // Removed
+      // phoneNumber: updatedUser.phone_number, // Removed
       complianceStatus: updatedUser.compliance_status, // Include compliance status
     };
 
@@ -188,8 +194,8 @@ export const setUserComplianceStatus = async (req: Request, res: Response, next:
       role: updatedUser.role,
       emailVerified: updatedUser.email_verified,
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
-      companyName: updatedUser.company_name,
-      phoneNumber: updatedUser.phone_number,
+      // companyName: updatedUser.company_name, // Removed
+      // phoneNumber: updatedUser.phone_number, // Removed
       complianceStatus: updatedUser.compliance_status, // Include compliance status
     };
 
