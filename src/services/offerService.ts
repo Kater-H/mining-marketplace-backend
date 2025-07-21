@@ -36,18 +36,20 @@ export class OfferService {
   }
 
   // Get offers for a specific listing (for sellers)
-  async getOffersByListing(listingId: number): Promise<Offer[]> {
+  async getOffersByListing(listingId: number, sellerId: number): Promise<Offer[]> { // <-- Corrected signature: added sellerId
     try {
       const result = await this.pool.query(
         `SELECT mo.*, u.first_name, u.last_name, u.email
          FROM mineral_offers mo
          JOIN users u ON mo.buyer_id = u.id
          WHERE mo.listing_id = $1
+         AND mo.listing_id IN (SELECT id FROM mineral_listings WHERE seller_id = $2) -- Ensure seller owns the listing
          ORDER BY mo.created_at DESC`,
-        [listingId]
+        [listingId, sellerId] // Pass both arguments to the query
       );
       return result.rows;
     } catch (error) {
+      console.error('Error in getOffersByListing:', error); // Added console log for debugging
       throw new ApplicationError('Failed to retrieve offers for listing.', 500, error as Error);
     }
   }
