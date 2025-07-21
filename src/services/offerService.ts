@@ -24,7 +24,7 @@ export class OfferService {
     const { listing_id, buyer_id, offer_price, offer_quantity, message, currency } = offerData;
     try {
       const result = await this.pool.query(
-        `INSERT INTO offers (listing_id, buyer_id, offer_price, offer_quantity, message, currency)
+        `INSERT INTO mineral_offers (listing_id, buyer_id, offer_price, offer_quantity, message, currency)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
         [listing_id, buyer_id, offer_price, offer_quantity, message, currency]
@@ -36,17 +36,15 @@ export class OfferService {
   }
 
   // Get offers for a specific listing (for sellers)
-  async getOffersByListing(listingId: number, sellerId: number): Promise<Offer[]> {
+  async getOffersByListing(listingId: number): Promise<Offer[]> {
     try {
-      // Join with mineral_listings to ensure the seller owns the listing
       const result = await this.pool.query(
-        `SELECT o.*, u.first_name as buyer_first_name, u.last_name as buyer_last_name
-         FROM offers o
-         JOIN mineral_listings ml ON o.listing_id = ml.id
-         JOIN users u ON o.buyer_id = u.id
-         WHERE o.listing_id = $1 AND ml.seller_id = $2
-         ORDER BY o.created_at DESC`,
-        [listingId, sellerId]
+        `SELECT mo.*, u.first_name, u.last_name, u.email
+         FROM mineral_offers mo
+         JOIN users u ON mo.buyer_id = u.id
+         WHERE mo.listing_id = $1
+         ORDER BY mo.created_at DESC`,
+        [listingId]
       );
       return result.rows;
     } catch (error) {
@@ -54,17 +52,15 @@ export class OfferService {
     }
   }
 
-  // Get offers made by a specific buyer
+  // Get offers by buyer
   async getOffersByBuyer(buyerId: number): Promise<Offer[]> {
     try {
-      // Join with mineral_listings to get mineral type and location for display
       const result = await this.pool.query(
-        `SELECT o.*, ml.mineral_type as listing_mineral_type, ml.location as listing_location,
-                ml.price_per_unit as listing_price_per_unit, ml.quantity as listing_quantity, ml.currency as listing_currency
-         FROM offers o
-         JOIN mineral_listings ml ON o.listing_id = ml.id
-         WHERE o.buyer_id = $1
-         ORDER BY o.created_at DESC`,
+        `SELECT mo.*, ml.mineral_type, ml.quantity as listing_quantity, ml.price_per_unit as listing_price_per_unit, ml.currency as listing_currency
+         FROM mineral_offers mo
+         JOIN mineral_listings ml ON mo.listing_id = ml.id
+         WHERE mo.buyer_id = $1
+         ORDER BY mo.created_at DESC`,
         [buyerId]
       );
       return result.rows;
@@ -78,7 +74,7 @@ export class OfferService {
     try {
       // Ensure the seller owns the listing associated with the offer
       const result = await this.pool.query(
-        `UPDATE offers
+        `UPDATE mineral_offers
          SET status = $1, updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
          AND listing_id IN (SELECT id FROM mineral_listings WHERE seller_id = $3)
@@ -98,13 +94,13 @@ export class OfferService {
   // Get a single offer by ID
   async getOfferById(offerId: number): Promise<Offer | null> {
     try {
-      const result = await this.pool.query('SELECT * FROM offers WHERE id = $1', [offerId]);
+      const result = await this.pool.query('SELECT * FROM mineral_offers WHERE id = $1', [offerId]);
       if (result.rows.length === 0) {
         return null;
       }
       return result.rows[0];
     } catch (error) {
-      throw new ApplicationError('Failed to retrieve offer details.', 500, error as Error);
+      throw new ApplicationError('Failed to retrieve offer by ID.', 500, error as Error);
     }
   }
 }
