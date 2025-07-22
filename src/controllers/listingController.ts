@@ -1,6 +1,6 @@
 // src/controllers/listingController.ts
 import { Request, Response, NextFunction } from 'express';
-import { ListingService, Listing } from '../services/listingService.js'; // <-- Added Listing interface import
+import { ListingService, Listing } from '../services/listingService.js';
 import { ApplicationError } from '../utils/applicationError.js';
 import Joi from 'joi';
 

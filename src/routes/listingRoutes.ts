@@ -8,7 +8,7 @@ import {
   updateListing,
   deleteListing,
   getListingsBySeller,
-} from '../controllers/marketplaceController.js'; // Corrected import path/name
+} from '../controllers/listingController.js'; // <-- CORRECTED: Changed to listingController.js
 import { authenticate } from '../middleware/authMiddleware.js';
 import { authorizeRoles } from '../middleware/authorizeMiddleware.js'; // This path must be correct!
 
