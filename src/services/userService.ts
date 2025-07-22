@@ -25,7 +25,7 @@ export class UserService {
     // Insert new user into database, including default compliance_status
     const result = await this.pool.query(
       `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verified, compliance_status)\
-       VALUES ($1, $2, $3, $4, $5, FALSE, 'pending') RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
+       VALUES ($1, $2, $3, $4, $5, FALSE, 'pending') RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status`, // Removed company_name, phone_number
       [firstName, lastName, email, hashedPassword, role]
     );
 
@@ -80,7 +80,7 @@ export class UserService {
            email = COALESCE($3, email),\
            updated_at = CURRENT_TIMESTAMP\
        WHERE id = $4\
-       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
+       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status`, // Removed company_name, phone_number
       [first_name, last_name, email, userId]
     );
 
@@ -97,7 +97,7 @@ export class UserService {
        SET compliance_status = $1,\
            updated_at = CURRENT_TIMESTAMP\
        WHERE id = $2\
-       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
+       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status`, // Removed company_name, phone_number
       [status, userId]
     );
 
