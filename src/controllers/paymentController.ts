@@ -33,12 +33,36 @@ export const createCheckoutSession = async (req: Request, res: Response, next: N
     // Define minimum amounts with explicit type
     const minimumAmounts: { [key: string]: number } = { 'USD': 50, 'GBP': 30, 'EUR': 30 };
     // Access minimum amount safely, defaulting to 50 cents if currency is not found
-    const minimumAmount = minimumAmounts[currency.toUpperCase()] || 50; 
+    const minimumAmount = minimumAmounts[currency.toUpperCase()] || 50;
     const amountInCents = Math.round(final_price * 100); // Convert to cents
 
     if (amountInCents < minimumAmount) {
       throw new ApplicationError(`Payment amount must be at least ${currency} ${(minimumAmount / 100).toFixed(2)} due to payment gateway minimums.`, 400);
     }
+
+    // --- NEW LOGIC: Check for existing transaction for this offer_id ---
+    if (offer_id) { // Only check if offer_id is provided
+        const existingTransactionQuery = 'SELECT id, status FROM transactions WHERE offer_id = $1';
+        const existingTransactionResult = await pool.query(existingTransactionQuery, [offer_id]);
+
+        if (existingTransactionResult.rows.length > 0) {
+            const existingTransaction = existingTransactionResult.rows[0];
+            if (existingTransaction.status === 'completed') {
+                console.warn(`Attempted to create duplicate payment for completed offer_id: ${offer_id}`);
+                throw new ApplicationError('This offer has already been paid for and completed.', 400);
+            } else {
+                // If a transaction exists but is not completed (e.g., pending, failed, refunded)
+                // We prevent creating a new one to avoid the unique constraint error.
+                // In a more advanced scenario, you might want to:
+                // 1. Redirect to the existing Stripe session if still valid.
+                // 2. Update the existing transaction record and create a new Stripe session.
+                // For now, we'll simply inform the user.
+                console.log(`Payment for offer_id ${offer_id} is already in progress or has failed. Returning existing transaction details.`);
+                throw new ApplicationError('A payment attempt for this offer is already in progress or has failed previously. Please check your offers or try again later.', 400);
+            }
+        }
+    }
+    // --- END NEW LOGIC ---
 
     // Create a pending transaction record in your database
     const transactionResult = await pool.query(
