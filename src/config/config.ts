@@ -1,30 +1,49 @@
-import 'dotenv/config';
+    // src/config/config.ts
+    import dotenv from 'dotenv';
 
-export const config = {
-  port: parseInt(process.env.PORT || '3000', 10), // Ensure port is a number
-  jwtSecret: process.env.JWT_SECRET || 'your_jwt_secret_key_fallback', // Ensure this is a string
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h', // Ensure this is a string
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://user:password@host:port/database', 
-  emailService: {
-    host: process.env.EMAIL_HOST || 'smtp.example.com',
-    port: parseInt(process.env.EMAIL_PORT || '587', 10),
-    secure: process.env.EMAIL_SECURE === 'true', 
-    auth: {
-      user: process.env.EMAIL_USER || 'user@example.com',
-      pass: process.env.EMAIL_PASS || 'password',
-    },
-  },
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    dotenv.config(); // Load environment variables from .env file
 
-  // Stripe Configuration
-  stripeSecretKey: process.env.STRIPE_SECRET_KEY || '', 
-  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '', 
+    export const config = {
+      port: parseInt(process.env.PORT || '10000', 10),
+      jwtSecret: process.env.JWT_SECRET || 'supersecretjwtkey',
+      jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
+      databaseUrl: process.env.DATABASE_URL || 'postgresql://user:password@host:port/database',
+      emailService: {
+        host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+        port: parseInt(process.env.EMAIL_PORT || '587', 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+          user: process.env.EMAIL_USER || 'user@ethereal.email',
+          pass: process.env.EMAIL_PASS || 'password',
+        },
+      },
+      frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+      stripeSecretKey: process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_STRIPE_SECRET_KEY',
+      stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_YOUR_WEBHOOK_SECRET',
+      logLevel: process.env.LOG_LEVEL || 'info',
+      // NEW: Add corsAllowedOrigins
+      corsAllowedOrigins: process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000', // Default for local dev
+    };
 
-  // Flutterwave Configuration (if you plan to use it)
-  flutterwavePublicKey: process.env.FLUTTERWAVE_PUBLIC_KEY || '',
-  flutterwaveSecretKey: process.env.FLUTTERWAVE_SECRET_KEY || '',
-  flutterwaveWebhookSecret: process.env.FLUTTERWAVE_WEBHOOK_SECRET || '',
-
-  // ADDED: For Logger Configuration
-  logLevel: process.env.LOG_LEVEL || 'info',
-};
+    // You should also define an interface for your config object for better type safety
+    export interface AppConfig {
+      port: number;
+      jwtSecret: string;
+      jwtExpiresIn: string;
+      databaseUrl: string;
+      emailService: {
+        host: string;
+        port: number;
+        secure: boolean;
+        auth: {
+          user: string;
+          pass: string;
+        };
+      };
+      frontendUrl: string;
+      stripeSecretKey: string;
+      stripeWebhookSecret: string;
+      logLevel: string;
+      corsAllowedOrigins: string; // <-- Add this to the interface
+    }
+    
