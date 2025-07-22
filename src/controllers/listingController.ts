@@ -1,6 +1,6 @@
 // src/controllers/listingController.ts
 import { Request, Response, NextFunction } from 'express';
-import { ListingService } from '../services/listingService.js'; // Ensure .js extension
+import { ListingService, Listing } from '../services/listingService.js'; // <-- Added Listing interface import
 import { ApplicationError } from '../utils/applicationError.js';
 import Joi from 'joi';
 
@@ -40,7 +40,7 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
     const sellerId = req.user!.id; // Get seller ID from authenticated user
 
     // Map camelCase from Joi validation result to snake_case for the database/service
-    const listingData = {
+    const listingData: Listing = { // Explicitly type as Listing
       seller_id: sellerId,
       mineral_type: value.mineralType,
       description: value.description,
@@ -103,7 +103,7 @@ export const updateListing = async (req: Request, res: Response, next: NextFunct
     const sellerId = req.user!.id; // Ensure only the owner or admin can update
 
     // Map camelCase from Joi validation result to snake_case for the database/service
-    const updatedData: { [key: string]: any } = {};
+    const updatedData: Partial<Listing> = {}; // Explicitly type as Partial<Listing>
     if (value.mineralType !== undefined) updatedData.mineral_type = value.mineralType;
     if (value.description !== undefined) updatedData.description = value.description;
     if (value.quantity !== undefined) updatedData.quantity = value.quantity;
