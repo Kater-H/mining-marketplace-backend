@@ -6,7 +6,7 @@ import Joi from 'joi';
 
 const listingService = new ListingService();
 
-// Joi schema for listing creation validation
+// Joi schema for listing creation validation - uses camelCase as received from frontend
 const createListingSchema = Joi.object({
   mineralType: Joi.string().trim().min(3).max(100).required(),
   description: Joi.string().trim().min(10).max(1000).required(),
@@ -17,7 +17,7 @@ const createListingSchema = Joi.object({
   location: Joi.string().trim().max(100).required(),
 });
 
-// Joi schema for listing update validation
+// Joi schema for listing update validation - uses camelCase as received from frontend
 const updateListingSchema = Joi.object({
   mineralType: Joi.string().trim().min(3).max(100).optional(),
   description: Joi.string().trim().min(10).max(1000).optional(),
@@ -38,42 +38,45 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
     }
 
     const sellerId = req.user!.id; // Get seller ID from authenticated user
-    const listing = await listingService.createListing({ ...value, seller_id: sellerId });
+
+    // Map camelCase from Joi validation result to snake_case for the database/service
+    const listingData = {
+      seller_id: sellerId,
+      mineral_type: value.mineralType,
+      description: value.description,
+      quantity: value.quantity,
+      unit: value.unit,
+      price_per_unit: value.pricePerUnit,
+      currency: value.currency,
+      location: value.location,
+      // status will default in DB or can be explicitly set if needed
+    };
+
+    const listing = await listingService.createListing(listingData);
     res.status(201).json(listing);
   } catch (error) {
     next(error);
   }
 };
 
-// Get all mineral listings with optional filters
+// Get all mineral listings (publicly accessible)
 export const getAllListings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Extract query parameters for filtering
-    const { mineralType, location, status, minPrice, maxPrice } = req.query;
-
-    const filters = {
-      mineralType: mineralType as string,
-      location: location as string,
-      status: status as 'available' | 'pending' | 'sold' | 'canceled',
-      minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
-      maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
-    };
-
-    const listings = await listingService.getAllListings(filters);
+    // Implement filtering and pagination if needed
+    const listings = await listingService.getAllListings();
     res.status(200).json(listings);
   } catch (error) {
     next(error);
   }
 };
 
-// Get a single mineral listing by ID
+// Get a single mineral listing by ID (publicly accessible)
 export const getListingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const listingId = parseInt(req.params.id);
     if (isNaN(listingId)) {
       throw new ApplicationError('Invalid listing ID.', 400);
     }
-
     const listing = await listingService.getListingById(listingId);
     if (!listing) {
       throw new ApplicationError('Listing not found.', 404);
@@ -98,7 +101,19 @@ export const updateListing = async (req: Request, res: Response, next: NextFunct
     }
 
     const sellerId = req.user!.id; // Ensure only the owner or admin can update
-    const updatedListing = await listingService.updateListing(listingId, sellerId, value);
+
+    // Map camelCase from Joi validation result to snake_case for the database/service
+    const updatedData: { [key: string]: any } = {};
+    if (value.mineralType !== undefined) updatedData.mineral_type = value.mineralType;
+    if (value.description !== undefined) updatedData.description = value.description;
+    if (value.quantity !== undefined) updatedData.quantity = value.quantity;
+    if (value.unit !== undefined) updatedData.unit = value.unit;
+    if (value.pricePerUnit !== undefined) updatedData.price_per_unit = value.pricePerUnit;
+    if (value.currency !== undefined) updatedData.currency = value.currency;
+    if (value.location !== undefined) updatedData.location = value.location;
+    if (value.status !== undefined) updatedData.status = value.status;
+
+    const updatedListing = await listingService.updateListing(listingId, sellerId, updatedData);
     res.status(200).json(updatedListing);
   } catch (error) {
     next(error);
@@ -128,6 +143,6 @@ export const getListingsBySeller = async (req: Request, res: Response, next: Nex
     const listings = await listingService.getListingsBySeller(sellerId);
     res.status(200).json(listings);
   } catch (error) {
-    throw new ApplicationError('Failed to retrieve seller listings.', 500, error as Error);
+    next(error);
   }
 };
