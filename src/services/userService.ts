@@ -24,54 +24,45 @@ export class UserService {
 
     // Insert new user into database, including default compliance_status
     const result = await this.pool.query(
-      `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verified, compliance_status)
-       VALUES ($1, $2, $3, $4, $5, FALSE, 'pending') RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status`, // Removed company_name, phone_number
+      `INSERT INTO users (first_name, last_name, email, password_hash, role, email_verified, compliance_status)\
+       VALUES ($1, $2, $3, $4, $5, FALSE, 'pending') RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
       [firstName, lastName, email, hashedPassword, role]
     );
 
     const newUser: BackendUser = result.rows[0];
-
-    // Generate JWT token - Use jwt.Secret for secret and SignOptions['expiresIn'] for expiresIn
-    const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, roles: [newUser.role] },
-      config.jwtSecret as Secret, // Assert as jwt.Secret
-      { expiresIn: config.jwtExpiresIn as SignOptions['expiresIn'] } // Assert using SignOptions type
-    );
+    const token = this.generateAuthToken(newUser.id, newUser.email, newUser.role);
 
     return { user: newUser, token };
   }
 
-  // Login user
+  // Log in a user
   async loginUser(email: string, password: string): Promise<{ user: BackendUser; token: string }> {
     const result = await this.pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user: BackendUser = result.rows[0];
+    const user = result.rows[0];
 
     if (!user) {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    // Generate JWT token - Use jwt.Secret for secret and SignOptions['expiresIn'] for expiresIn
-    const token = jwt.sign(
-      { id: user.id, email: user.email, roles: [user.role] },
-      config.jwtSecret as Secret, // Assert as jwt.Secret
-      { expiresIn: config.jwtExpiresIn as SignOptions['expiresIn'] } // Assert using SignOptions type
-    );
-
+    const token = this.generateAuthToken(user.id, user.email, user.role);
     return { user, token };
   }
 
-  // Get user profile by ID
-  async getUserProfile(userId: number): Promise<BackendUser | null> {
-    const result = await this.pool.query(
-      `SELECT id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status
-       FROM users WHERE id = $1`, // Removed company_name, phone_number
-      [userId]
-    );
+  // Generate JWT token
+  private generateAuthToken(id: number, email: string, role: string): string {
+    const payload = { id, email, roles: [role] }; // Ensure roles is an array
+    const options: SignOptions = { expiresIn: '1h' }; // Token expires in 1 hour
+    return jwt.sign(payload, config.jwtSecret as Secret, options);
+  }
+
+  // Get user by ID
+  async getUserById(id: number): Promise<BackendUser | null> {
+    const result = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return null;
     }
@@ -84,12 +75,12 @@ export class UserService {
 
     const result = await this.pool.query(
       `UPDATE users
-       SET first_name = COALESCE($1, first_name),
-           last_name = COALESCE($2, last_name),
-           email = COALESCE($3, email),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4
-       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status`, // Removed company_name, phone_number
+       SET first_name = COALESCE($1, first_name),\
+           last_name = COALESCE($2, last_name),\
+           email = COALESCE($3, email),\
+           updated_at = CURRENT_TIMESTAMP\
+       WHERE id = $4\
+       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
       [first_name, last_name, email, userId]
     );
 
@@ -102,17 +93,27 @@ export class UserService {
   // Method to update a user's compliance status (Admin-only)
   async updateUserComplianceStatus(userId: number, status: 'pending' | 'compliant' | 'non_compliant'): Promise<BackendUser> {
     const result = await this.pool.query(
-      `UPDATE users
-       SET compliance_status = $1,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, compliance_status`, // Removed company_name, phone_number
+      `UPDATE users\
+       SET compliance_status = $1,\
+           updated_at = CURRENT_TIMESTAMP\
+       WHERE id = $2\
+       RETURNING id, first_name, last_name, email, role, email_verified, created_at, updated_at, company_name, phone_number, compliance_status`,
       [status, userId]
     );
 
     if (result.rows.length === 0) {
-      throw new ApplicationError('User not found.', 404);
+      throw new ApplicationError('User not found or no changes made.', 404);
     }
     return result.rows[0];
+  }
+
+  // NEW: Get all users (for admin panel)
+  async getAllUsers(): Promise<BackendUser[]> {
+    try {
+      const result = await this.pool.query('SELECT * FROM users ORDER BY created_at DESC');
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError('Failed to retrieve all users.', 500, error as Error);
+    }
   }
 }

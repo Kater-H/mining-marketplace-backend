@@ -3,12 +3,13 @@ import { Router } from 'express';
 import {
   registerUser,
   loginUser,
-  getProfile, // Corrected import name
-  updateProfile, // Corrected import name
-  setUserComplianceStatus, 
+  getProfile,
+  updateProfile,
+  setUserComplianceStatus,
+  getAllUsers, // <-- NEW: Import getAllUsers controller function
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/authorizeMiddleware.js'; 
+import { authorizeRoles } from '../middleware/authorizeMiddleware.js';
 
 const router = Router();
 
@@ -18,11 +19,14 @@ router.post('/login', loginUser);
 // All routes below this will require authentication
 router.use(authenticate);
 
-router.get('/profile', getProfile); // Use getProfile
-router.put('/profile', updateProfile); // Use updateProfile
+router.get('/profile', getProfile);
+router.put('/profile', updateProfile);
 
 // Admin-only route to set user compliance status
 router.put('/compliance/:userId/status', authorizeRoles(['admin']), setUserComplianceStatus);
+
+// NEW: Admin-only route to get all users
+router.get('/', authorizeRoles(['admin']), getAllUsers); // <-- NEW ROUTE
 
 // Export as named export for app.ts
 export const userRoutes = router;

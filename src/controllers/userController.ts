@@ -14,8 +14,6 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   role: Joi.string().valid('buyer', 'miner', 'admin').default('buyer'),
-  // companyName: Joi.string().trim().max(100).optional().allow(''), // Removed
-  // phoneNumber: Joi.string().trim().max(20).optional().allow(''), // Removed
 });
 
 // Joi schema for user login validation
@@ -29,8 +27,6 @@ const profileUpdateSchema = Joi.object({
   firstName: Joi.string().trim().min(2).max(50).optional(),
   lastName: Joi.string().trim().min(2).max(50).optional(),
   email: Joi.string().email().optional(),
-  // companyName: Joi.string().trim().max(100).optional().allow(''), // Removed
-  // phoneNumber: Joi.string().trim().max(20).optional().allow(''), // Removed
 });
 
 // Joi schema for compliance status update (Admin-only)
@@ -45,55 +41,23 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
     if (error) {
       throw new ApplicationError(error.details[0].message, 400);
     }
-
-    const { user, token } = await userService.registerUser(value); // Destructure to get 'user' and 'token'
-
-    // Map BackendUser to Frontend User for response
-    const frontendUser = {
-      id: user.id,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      email: user.email,
-      role: user.role,
-      emailVerified: user.email_verified,
-      memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      // companyName: user.company_name, // Removed
-      // phoneNumber: user.phone_number, // Removed
-      complianceStatus: user.compliance_status, // Include compliance status
-    };
-
-    res.status(201).json({ message: 'User registered successfully.', user: frontendUser, token });
+    const { user, token } = await userService.registerUser(value);
+    res.status(201).json({ message: 'User registered successfully!', user, token });
   } catch (error) {
     next(error);
   }
 };
 
-// Login user
+// Log in a user
 export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { error, value } = loginSchema.validate(req.body);
     if (error) {
       throw new ApplicationError(error.details[0].message, 400);
     }
-
     const { email, password } = value;
-    const { user, token } = await userService.loginUser(email, password); // Destructure to get 'user' and 'token'
-
-    // Map BackendUser to Frontend User for response
-    const frontendUser = {
-      id: user.id,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      email: user.email,
-      role: user.role,
-      emailVerified: user.email_verified,
-      memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      // companyName: user.company_name, // Removed
-      // phoneNumber: user.phone_number, // Removed
-      complianceStatus: user.compliance_status, // Include compliance status
-    };
-
-    res.status(200).json({ message: 'Login successful.', user: frontendUser, token });
+    const { user, token } = await userService.loginUser(email, password);
+    res.status(200).json({ message: 'Logged in successfully!', user, token });
   } catch (error) {
     next(error);
   }
@@ -102,13 +66,13 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
 // Get user profile
 export const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user!.id; // User ID from authenticated token
-    const user = await userService.getUserProfile(userId);
-
-    if (!user) {
-      throw new ApplicationError('User profile not found.', 404);
+    if (!req.user) {
+      throw new ApplicationError('User not authenticated.', 401);
     }
-
+    const user = await userService.getUserById(req.user.id);
+    if (!user) {
+      throw new ApplicationError('User not found.', 404);
+    }
     // Map BackendUser to Frontend User for response
     const frontendUser = {
       id: user.id,
@@ -118,11 +82,10 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
       role: user.role,
       emailVerified: user.email_verified,
       memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      // companyName: user.company_name, // Removed
-      // phoneNumber: user.phone_number, // Removed
-      complianceStatus: user.compliance_status, // Include compliance status
+      companyName: user.company_name,
+      phoneNumber: user.phone_number,
+      complianceStatus: user.compliance_status,
     };
-
     res.status(200).json(frontendUser);
   } catch (error) {
     next(error);
@@ -132,22 +95,19 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
 // Update user profile
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user!.id; // User ID from authenticated token
+    if (!req.user) {
+      throw new ApplicationError('User not authenticated.', 401);
+    }
     const { error, value } = profileUpdateSchema.validate(req.body);
     if (error) {
       throw new ApplicationError(error.details[0].message, 400);
     }
 
-    // Map frontend camelCase to backend snake_case for update
-    const updateData: Partial<BackendUser> = { // Explicitly type updateData
+    const updatedUser = await userService.updateUserProfile(req.user.id, {
       first_name: value.firstName,
       last_name: value.lastName,
       email: value.email,
-      // company_name: value.companyName, // Removed
-      // phone_number: value.phoneNumber, // Removed
-    };
-
-    const updatedUser = await userService.updateUserProfile(userId, updateData);
+    });
 
     // Map BackendUser to Frontend User for response
     const frontendUser = {
@@ -158,9 +118,9 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       role: updatedUser.role,
       emailVerified: updatedUser.email_verified,
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
-      // companyName: updatedUser.company_name, // Removed
-      // phoneNumber: updatedUser.phone_number, // Removed
-      complianceStatus: updatedUser.compliance_status, // Include compliance status
+      companyName: updatedUser.company_name,
+      phoneNumber: updatedUser.phone_number,
+      complianceStatus: updatedUser.compliance_status,
     };
 
     res.status(200).json({ message: 'Profile updated successfully.', user: frontendUser });
@@ -194,12 +154,36 @@ export const setUserComplianceStatus = async (req: Request, res: Response, next:
       role: updatedUser.role,
       emailVerified: updatedUser.email_verified,
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
-      // companyName: updatedUser.company_name, // Removed
-      // phoneNumber: updatedUser.phone_number, // Removed
+      companyName: updatedUser.company_name,
+      phoneNumber: updatedUser.phone_number,
       complianceStatus: updatedUser.compliance_status, // Include compliance status
     };
 
     res.status(200).json({ message: `User ${userIdToUpdate} compliance status updated to ${status}.`, user: frontendUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// NEW: Admin-only endpoint to get all users
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const users = await userService.getAllUsers();
+    // You might want to filter sensitive information like password_hash before sending
+    const safeUsers = users.map(user => ({
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      role: user.role,
+      email_verified: user.email_verified,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      company_name: user.company_name,
+      phone_number: user.phone_number,
+      compliance_status: user.compliance_status,
+    }));
+    res.status(200).json(safeUsers);
   } catch (error) {
     next(error);
   }
