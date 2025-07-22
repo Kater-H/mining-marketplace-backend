@@ -48,37 +48,10 @@ export class ListingService {
     }
   }
 
-  // Get all mineral listings with optional filters
-  async getAllListings(filters: ListingFilters): Promise<Listing[]> {
-    let query = `SELECT * FROM mineral_listings WHERE 1=1`;
-    const params: any[] = [];
-    let paramIndex = 1;
-
-    if (filters.mineralType) {
-      query += ` AND mineral_type ILIKE $${paramIndex++}`;
-      params.push(`%${filters.mineralType}%`);
-    }
-    if (filters.location) {
-      query += ` AND location ILIKE $${paramIndex++}`;
-      params.push(`%${filters.location}%`);
-    }
-    if (filters.status) {
-      query += ` AND status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
-    if (filters.minPrice) {
-      query += ` AND price_per_unit >= $${paramIndex++}`;
-      params.push(filters.minPrice);
-    }
-    if (filters.maxPrice) {
-      query += ` AND price_per_unit <= $${paramIndex++}`;
-      params.push(filters.maxPrice);
-    }
-
-    query += ` ORDER BY created_at DESC`;
-
+  // Get all mineral listings
+  async getAllListings(): Promise<Listing[]> {
     try {
-      const result = await this.pool.query(query, params);
+      const result = await this.pool.query('SELECT * FROM mineral_listings ORDER BY created_at DESC');
       return result.rows;
     } catch (error) {
       throw new ApplicationError('Failed to retrieve listings.', 500, error as Error);
@@ -86,37 +59,38 @@ export class ListingService {
   }
 
   // Get a single mineral listing by ID
-  async getListingById(listingId: number): Promise<Listing | null> {
+  async getListingById(id: number): Promise<Listing | null> {
     try {
-      const result = await this.pool.query('SELECT * FROM mineral_listings WHERE id = $1', [listingId]);
+      const result = await this.pool.query('SELECT * FROM mineral_listings WHERE id = $1', [id]);
       if (result.rows.length === 0) {
         return null;
       }
       return result.rows[0];
     } catch (error) {
-      throw new ApplicationError('Failed to retrieve listing details.', 500, error as Error);
+      throw new ApplicationError('Failed to retrieve listing by ID.', 500, error as Error);
     }
   }
 
   // Update a mineral listing
   async updateListing(listingId: number, sellerId: number, updateData: Partial<Listing>): Promise<Listing> {
-    const { mineral_type, description, quantity, unit, price_per_unit, currency, location, status } = updateData;
+    console.log(`[ListingService] updateListing called with: listingId=${listingId}, sellerId=${sellerId}, updateData=`, updateData); // Debug log
+
+    const fields = Object.keys(updateData)
+      .map((key, index) => `${key} = $${index + 3}`) // $3, $4, ... for dynamic fields
+      .join(', ');
+    const values = Object.values(updateData);
+
+    if (fields.length === 0) {
+      throw new ApplicationError('No valid fields provided for update.', 400);
+    }
+
     try {
       const result = await this.pool.query(
         `UPDATE mineral_listings
-         SET mineral_type = COALESCE($1, mineral_type),
-             description = COALESCE($2, description),
-             quantity = COALESCE($3, quantity),
-             unit = COALESCE($4, unit),
-             price_per_unit = COALESCE($5, price_per_unit),
-             currency = COALESCE($6, currency),
-             location = COALESCE($7, location),
-             status = COALESCE($8, status),
-             last_updated = CURRENT_TIMESTAMP,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $9 AND seller_id = $10
+         SET ${fields}, last_updated = CURRENT_TIMESTAMP
+         WHERE id = $1 AND seller_id = $2
          RETURNING *`,
-        [mineral_type, description, quantity, unit, price_per_unit, currency, location, status, listingId, sellerId]
+        [listingId, sellerId, ...values] // $1 for listingId, $2 for sellerId, then dynamic values
       );
 
       if (result.rows.length === 0) {
@@ -129,6 +103,7 @@ export class ListingService {
       }
       return result.rows[0];
     } catch (error) {
+      console.error("[ListingService] Error updating listing:", error); // Debug log
       throw new ApplicationError('Failed to update listing.', 500, error as Error);
     }
   }
@@ -162,7 +137,7 @@ export class ListingService {
       );
       return result.rows;
     } catch (error) {
-      throw new ApplicationError('Failed to retrieve seller listings.', 500, error as Error);
+      throw new ApplicationError('Failed to retrieve listings by seller.', 500, error as Error);
     }
   }
 }
