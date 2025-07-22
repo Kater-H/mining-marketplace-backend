@@ -82,8 +82,8 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
       role: user.role,
       emailVerified: user.email_verified,
       memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A',
-      companyName: user.company_name,
-      phoneNumber: user.phone_number,
+      companyName: user.company_name ?? undefined, // <-- FIX: Handle optional property
+      phoneNumber: user.phone_number ?? undefined, // <-- FIX: Handle optional property
       complianceStatus: user.compliance_status,
     };
     res.status(200).json(frontendUser);
@@ -118,8 +118,8 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       role: updatedUser.role,
       emailVerified: updatedUser.email_verified,
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
-      companyName: updatedUser.company_name,
-      phoneNumber: updatedUser.phone_number,
+      companyName: updatedUser.company_name ?? undefined, // <-- FIX: Handle optional property
+      phoneNumber: updatedUser.phone_number ?? undefined, // <-- FIX: Handle optional property
       complianceStatus: updatedUser.compliance_status,
     };
 
@@ -154,8 +154,8 @@ export const setUserComplianceStatus = async (req: Request, res: Response, next:
       role: updatedUser.role,
       emailVerified: updatedUser.email_verified,
       memberSince: updatedUser.created_at ? new Date(updatedUser.created_at).toLocaleDateString() : 'N/A',
-      companyName: updatedUser.company_name,
-      phoneNumber: updatedUser.phone_number,
+      companyName: updatedUser.company_name ?? undefined, // <-- FIX: Handle optional property
+      phoneNumber: updatedUser.phone_number ?? undefined, // <-- FIX: Handle optional property
       complianceStatus: updatedUser.compliance_status, // Include compliance status
     };
 
@@ -179,8 +179,8 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       email_verified: user.email_verified,
       created_at: user.created_at,
       updated_at: user.updated_at,
-      company_name: user.company_name,
-      phone_number: user.phone_number,
+      company_name: user.company_name ?? undefined, // <-- FIX: Handle optional property
+      phone_number: user.phone_number ?? undefined, // <-- FIX: Handle optional property
       compliance_status: user.compliance_status,
     }));
     res.status(200).json(safeUsers);
