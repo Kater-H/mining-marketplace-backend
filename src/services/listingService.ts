@@ -40,7 +40,7 @@ export class ListingService {
         `INSERT INTO mineral_listings (seller_id, mineral_type, description, quantity, unit, price_per_unit, currency, location)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [seller_id, mineral_type, description, quantity, unit, price_per_per_unit, currency, location]
+        [seller_id, mineral_type, description, quantity, unit, price_per_unit, currency, location] // <-- CORRECTED TYPO HERE
       );
       return result.rows[0];
     } catch (error) {
