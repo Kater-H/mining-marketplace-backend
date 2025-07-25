@@ -8,14 +8,18 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
-// --- Import your routes using NAMED IMPORTS ---
-// This assumes all your route files (authRoutes.ts, userRoutes.ts, etc.)
-// use 'export { router };' or 'export const router = Router();'
+// --- Import your routes with the CORRECT export style ---
+// Based on the files provided and previous errors:
+// - userRoutes uses 'export const userRoutes = router;' (named export)
+// - paymentRoutes uses 'export default router;' (default export)
+// - For others (authRoutes, listingRoutes, offerRoutes, marketplaceRoutes),
+//   we'll assume they use named exports ({ router as X }) based on previous fixes.
+
 import { router as authRoutes } from './routes/authRoutes.js';
 import { router as userRoutes } from './routes/userRoutes.js';
 import { router as listingRoutes } from './routes/listingRoutes.js';
 import { router as offerRoutes } from './routes/offerRoutes.js';
-import { router as paymentRoutes } from './routes/paymentRoutes.js'; // Assuming you have this file
+import paymentRoutesRouter from './routes/paymentRoutes.js'; // <--- CORRECTED: Default import for paymentRoutes
 import { router as marketplaceRoutes } from './routes/marketplaceRoutes.js';
 
 
@@ -66,10 +70,8 @@ app.use(limiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
-// If you have individual routes not aggregated by marketplaceRoutes:
-// app.use('/api/listings', listingRoutes);
-// app.use('/api/offers', offerRoutes);
-// app.use('/api/payments', paymentRoutes);
+// Use the correctly imported default export for paymentRoutes
+app.use('/api/payments', paymentRoutesRouter);
 
 
 app.get('/', (req, res) => {
