@@ -1,40 +1,47 @@
 // src/app.ts (or src/server.ts, depending on your project structure)
 
 import express from 'express';
-import cors from 'cors'; // Import cors
+import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
-// Import your routes
+// --- Import your routes ---
+// OPTION A: If your route files use 'export default router;'
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import listingRoutes from './routes/listingRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
-import marketplaceRoutes from './routes/marketplaceRoutes.js'; // Assuming this aggregates other routes
+import marketplaceRoutes from './routes/marketplaceRoutes.js';
 
-import { errorHandler } from './middleware/errorHandler.js'; // Assuming you have a global error handler
+// OPTION B: If your route files use 'export const router = Router();' or 'export { router };'
+// In this case, you would uncomment these and comment out OPTION A imports.
+// import { router as authRoutes } from './routes/authRoutes.js';
+// import { router as userRoutes } from './routes/userRoutes.js';
+// import { router as listingRoutes } from './routes/listingRoutes.js';
+// import { router as offerRoutes } from './routes/offerRoutes.js';
+// import { router as paymentRoutes } from './routes/paymentRoutes.js';
+// import { router as marketplaceRoutes } from './routes/marketplaceRoutes.js';
 
-dotenv.config(); // Load environment variables
+
+import { errorHandler } from './middleware/errorHandler.js';
+
+dotenv.config();
 
 const app = express();
 
-// --- CORS Configuration ---
-// This is critical for cross-origin requests from your frontend.
-// Ensure this is placed early in your middleware chain.
 const allowedOrigins = [
-  'http://localhost:5173', // For local frontend development
-  'http://localhost:3000', // Common React dev port
-  'https://your-frontend-app-name.onrender.com', // Replace with your actual Render frontend URL
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://mining-marketplace-frontend-XXXX.onrender.com', // Replace with your actual Render frontend URL
   // Add any other frontend URLs that need to access this backend
 ];
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -42,46 +49,41 @@ const corsOptions: cors.CorsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow OPTIONS for preflight
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
-  credentials: true, // Allow cookies to be sent (if you use them for auth)
-  optionsSuccessStatus: 204, // For preflight requests, return 204 No Content
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 204,
 };
 
-app.use(cors(corsOptions)); // Apply CORS middleware
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
+app.use(compression());
+app.use(morgan('dev'));
 
-// --- Other Middleware ---
-app.use(express.json()); // Body parser for JSON requests
-app.use(express.urlencoded({ extended: true })); // Body parser for URL-encoded requests
-app.use(helmet()); // Security headers
-app.use(compression()); // Gzip compression
-app.use(morgan('dev')); // HTTP request logger
-
-// Rate limiting to prevent abuse
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 app.use(limiter);
 
 
-// --- Routes ---
+// --- Apply Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-// Use marketplaceRoutes to aggregate all marketplace-related routes
 app.use('/api/marketplace', marketplaceRoutes);
-// If you have other top-level routes, add them here
-// app.use('/api/listings', listingRoutes); // If you want listings directly under /api
-// app.use('/api/offers', offerRoutes); // If you want offers directly under /api
+// If you have individual routes not aggregated by marketplaceRoutes:
+// app.use('/api/listings', listingRoutes);
+// app.use('/api/offers', offerRoutes);
+// app.use('/api/payments', paymentRoutes);
 
 
-// Basic route for health check
 app.get('/', (req, res) => {
   res.status(200).send('Mining Marketplace Backend API is running!');
 });
 
-// --- Global Error Handler ---
-app.use(errorHandler); // This should be the last middleware
+app.use(errorHandler);
 
-export default app; // Export the app for server.ts
+export default app;
