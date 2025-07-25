@@ -1,47 +1,72 @@
 // src/controllers/listingController.ts
 import { Request, Response, NextFunction } from 'express';
-import { ListingService, Listing } from '../services/listingService.js';
+import { ListingService } from '../services/listingService.js'; // Assuming ListingService exists
 import { ApplicationError } from '../utils/applicationError.js';
 import Joi from 'joi';
 
+// Define a basic interface for the listing data as it comes from the backend/DB
+// This should align with your actual database table columns and joined data
+export interface BackendListing {
+  id: number;
+  seller_id: number;
+  mineral_type: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  price_per_unit: number;
+  currency: string;
+  location: string;
+  status: 'available' | 'pending' | 'sold' | 'canceled';
+  created_at: Date;
+  updated_at: Date;
+  // Joined seller details (from users table)
+  seller_company_name?: string;
+  seller_location?: string;
+  seller_compliance_status?: 'pending' | 'compliant' | 'non_compliant';
+}
+
 const listingService = new ListingService();
 
-// Joi schema for listing creation validation - uses camelCase as received from frontend
+// Joi schema for creating a new listing
 const createListingSchema = Joi.object({
   mineralType: Joi.string().trim().min(3).max(100).required(),
   description: Joi.string().trim().min(10).max(1000).required(),
-  quantity: Joi.number().positive().precision(4).required(),
-  unit: Joi.string().trim().max(10).required(),
-  pricePerUnit: Joi.number().positive().precision(4).required(),
-  currency: Joi.string().length(3).uppercase().required(),
-  location: Joi.string().trim().max(100).required(),
+  quantity: Joi.number().min(0.01).required(),
+  unit: Joi.string().trim().required(),
+  pricePerUnit: Joi.number().min(0.01).required(),
+  currency: Joi.string().trim().length(3).uppercase().required(),
+  location: Joi.string().trim().min(3).max(100).required(),
 });
 
-// Joi schema for listing update validation - uses camelCase as received from frontend
+// Joi schema for updating an existing listing
 const updateListingSchema = Joi.object({
   mineralType: Joi.string().trim().min(3).max(100).optional(),
   description: Joi.string().trim().min(10).max(1000).optional(),
-  quantity: Joi.number().positive().precision(4).optional(),
-  unit: Joi.string().trim().max(10).optional(),
-  pricePerUnit: Joi.number().positive().precision(4).optional(),
-  currency: Joi.string().length(3).uppercase().optional(),
-  location: Joi.string().trim().max(100).optional(),
+  quantity: Joi.number().min(0.01).optional(),
+  unit: Joi.string().trim().optional(),
+  pricePerUnit: Joi.number().min(0.01).optional(),
+  currency: Joi.string().trim().length(3).uppercase().optional(),
+  location: Joi.string().trim().min(3).max(100).optional(),
   status: Joi.string().valid('available', 'pending', 'sold', 'canceled').optional(),
 });
 
-// Create a new mineral listing
+/**
+ * Creates a new mineral listing.
+ * Requires authentication and 'miner' or 'admin' role.
+ */
 export const createListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!req.user) {
+      throw new ApplicationError('User not authenticated.', 401);
+    }
+
     const { error, value } = createListingSchema.validate(req.body);
     if (error) {
       throw new ApplicationError(error.details[0].message, 400);
     }
 
-    const sellerId = req.user!.id; // Get seller ID from authenticated user
-
-    // Map camelCase from Joi validation result to snake_case for the database/service
-    const listingData: Listing = { // Explicitly type as Listing
-      seller_id: sellerId,
+    const newListing = await listingService.createListing({
+      seller_id: req.user.id, // Seller ID from authenticated user
       mineral_type: value.mineralType,
       description: value.description,
       quantity: value.quantity,
@@ -49,50 +74,121 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
       price_per_unit: value.pricePerUnit,
       currency: value.currency,
       location: value.location,
-      // status will default in DB or can be explicitly set if needed
+      status: 'available', // Default status for new listings
+    });
+
+    // Map BackendListing to Frontend Listing for response
+    const frontendListing = {
+      id: newListing.id,
+      seller_id: newListing.seller_id,
+      mineral_type: newListing.mineral_type,
+      description: newListing.description,
+      quantity: newListing.quantity,
+      unit: newListing.unit,
+      price_per_unit: newListing.price_per_unit,
+      currency: newListing.currency,
+      location: newListing.location,
+      status: newListing.status,
+      listed_date: newListing.created_at.toISOString(),
+      last_updated: newListing.updated_at.toISOString(),
+      created_at: newListing.created_at.toISOString(),
+      updated_at: newListing.updated_at.toISOString(),
+      // Seller details are not available on creation, will be fetched on display
     };
 
-    const listing = await listingService.createListing(listingData);
-    res.status(201).json(listing);
+    res.status(201).json({ message: 'Listing created successfully!', listing: frontendListing });
   } catch (error) {
     next(error);
   }
 };
 
-// Get all mineral listings (publicly accessible)
+/**
+ * Gets all mineral listings with seller details.
+ */
 export const getAllListings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Implement filtering and pagination if needed
-    const listings = await listingService.getAllListings();
-    res.status(200).json(listings);
+    const listings = await listingService.getAllListingsWithSellerDetails(); // NEW method
+    // Map BackendListing (with joined seller data) to Frontend Listing for response
+    const frontendListings = listings.map(listing => ({
+      id: listing.id,
+      seller_id: listing.seller_id,
+      mineral_type: listing.mineral_type,
+      description: listing.description,
+      quantity: listing.quantity,
+      unit: listing.unit,
+      price_per_unit: listing.price_per_unit,
+      currency: listing.currency,
+      location: listing.location,
+      status: listing.status,
+      listed_date: listing.created_at.toISOString(),
+      last_updated: listing.updated_at.toISOString(),
+      created_at: listing.created_at.toISOString(),
+      updated_at: listing.updated_at.toISOString(),
+      seller_company_name: listing.seller_company_name, // Include joined data
+      seller_location: listing.seller_location,         // Include joined data
+      seller_compliance_status: listing.seller_compliance_status, // Include joined data
+    }));
+    res.status(200).json(frontendListings);
   } catch (error) {
     next(error);
   }
 };
 
-// Get a single mineral listing by ID (publicly accessible)
+/**
+ * Gets a single mineral listing by ID with seller details.
+ */
 export const getListingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const listingId = parseInt(req.params.id);
     if (isNaN(listingId)) {
-      throw new ApplicationError('Invalid listing ID.', 400);
+      throw new ApplicationError('Invalid listing ID provided.', 400);
     }
-    const listing = await listingService.getListingById(listingId);
+
+    const listing = await listingService.getListingByIdWithSellerDetails(listingId); // NEW method
     if (!listing) {
       throw new ApplicationError('Listing not found.', 404);
     }
-    res.status(200).json(listing);
+
+    // Map BackendListing (with joined seller data) to Frontend Listing for response
+    const frontendListing = {
+      id: listing.id,
+      seller_id: listing.seller_id,
+      mineral_type: listing.mineral_type,
+      description: listing.description,
+      quantity: listing.quantity,
+      unit: listing.unit,
+      price_per_unit: listing.price_per_unit,
+      currency: listing.currency,
+      location: listing.location,
+      status: listing.status,
+      listed_date: listing.created_at.toISOString(),
+      last_updated: listing.updated_at.toISOString(),
+      created_at: listing.created_at.toISOString(),
+      updated_at: listing.updated_at.toISOString(),
+      seller_company_name: listing.seller_company_name, // Include joined data
+      seller_location: listing.seller_location,         // Include joined data
+      seller_compliance_status: listing.seller_compliance_status, // Include joined data
+    };
+
+    res.status(200).json(frontendListing);
   } catch (error) {
     next(error);
   }
 };
 
-// Update a mineral listing
+/**
+ * Updates an existing mineral listing.
+ * Requires authentication and ownership or 'admin' role.
+ */
 export const updateListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!req.user) {
+      throw new ApplicationError('User not authenticated.', 401);
+    }
+
     const listingId = parseInt(req.params.id);
     if (isNaN(listingId)) {
-      throw new ApplicationError('Invalid listing ID.', 400);
+      throw new ApplicationError('Invalid listing ID provided.', 400);
     }
 
     const { error, value } = updateListingSchema.validate(req.body);
@@ -100,48 +196,67 @@ export const updateListing = async (req: Request, res: Response, next: NextFunct
       throw new ApplicationError(error.details[0].message, 400);
     }
 
-    const sellerId = req.user!.id; // Ensure only the owner or admin can update
+    // Ensure only the owner or an admin can update
+    const existingListing = await listingService.getListingById(listingId); // Get without seller details for auth check
+    if (!existingListing) {
+      throw new ApplicationError('Listing not found.', 404);
+    }
+    if (existingListing.seller_id !== req.user.id && req.user.role !== 'admin') {
+      throw new ApplicationError('Unauthorized: You can only update your own listings.', 403);
+    }
 
-    // Map camelCase from Joi validation result to snake_case for the database/service
-    const updatedData: Partial<Listing> = {}; // Explicitly type as Partial<Listing>
-    if (value.mineralType !== undefined) updatedData.mineral_type = value.mineralType;
-    if (value.description !== undefined) updatedData.description = value.description;
-    if (value.quantity !== undefined) updatedData.quantity = value.quantity;
-    if (value.unit !== undefined) updatedData.unit = value.unit;
-    if (value.pricePerUnit !== undefined) updatedData.price_per_unit = value.pricePerUnit;
-    if (value.currency !== undefined) updatedData.currency = value.currency;
-    if (value.location !== undefined) updatedData.location = value.location;
-    if (value.status !== undefined) updatedData.status = value.status;
+    const updatedListing = await listingService.updateListing(listingId, value);
 
-    const updatedListing = await listingService.updateListing(listingId, sellerId, updatedData);
-    res.status(200).json(updatedListing);
+    // Map BackendListing to Frontend Listing for response (seller details not needed here)
+    const frontendListing = {
+      id: updatedListing.id,
+      seller_id: updatedListing.seller_id,
+      mineral_type: updatedListing.mineral_type,
+      description: updatedListing.description,
+      quantity: updatedListing.quantity,
+      unit: updatedListing.unit,
+      price_per_unit: updatedListing.price_per_unit,
+      currency: updatedListing.currency,
+      location: updatedListing.location,
+      status: updatedListing.status,
+      listed_date: updatedListing.created_at.toISOString(),
+      last_updated: updatedListing.updated_at.toISOString(),
+      created_at: updatedListing.created_at.toISOString(),
+      updated_at: updatedListing.updated_at.toISOString(),
+    };
+
+    res.status(200).json({ message: 'Listing updated successfully!', listing: frontendListing });
   } catch (error) {
     next(error);
   }
 };
 
-// Delete a mineral listing
+/**
+ * Deletes a mineral listing.
+ * Requires authentication and ownership or 'admin' role.
+ */
 export const deleteListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const listingId = parseInt(req.params.id);
-    if (isNaN(listingId)) {
-      throw new ApplicationError('Invalid listing ID.', 400);
+    if (!req.user) {
+      throw new ApplicationError('User not authenticated.', 401);
     }
 
-    const sellerId = req.user!.id; // Ensure only the owner or admin can delete
-    await listingService.deleteListing(listingId, sellerId);
-    res.status(204).send(); // No content on successful deletion
-  } catch (error) {
-    throw new ApplicationError('Failed to delete listing.', 500, error as Error);
-  }
-};
+    const listingId = parseInt(req.params.id);
+    if (isNaN(listingId)) {
+      throw new ApplicationError('Invalid listing ID provided.', 400);
+    }
 
-// Get listings by authenticated seller
-export const getListingsBySeller = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const sellerId = req.user!.id; // Get seller ID from authenticated user
-    const listings = await listingService.getListingsBySeller(sellerId);
-    res.status(200).json(listings);
+    // Ensure only the owner or an admin can delete
+    const existingListing = await listingService.getListingById(listingId);
+    if (!existingListing) {
+      throw new ApplicationError('Listing not found.', 404);
+    }
+    if (existingListing.seller_id !== req.user.id && req.user.role !== 'admin') {
+      throw new ApplicationError('Unauthorized: You can only delete your own listings.', 403);
+    }
+
+    await listingService.deleteListing(listingId);
+    res.status(204).send(); // No content on successful deletion
   } catch (error) {
     next(error);
   }
