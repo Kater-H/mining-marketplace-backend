@@ -1,29 +1,10 @@
 // src/controllers/listingController.ts
 import { Request, Response, NextFunction } from 'express';
-import { ListingService } from '../services/listingService.js'; // Assuming ListingService exists
+import { ListingService } from '../services/listingService.js';
 import { ApplicationError } from '../utils/applicationError.js';
 import Joi from 'joi';
-
-// Define a basic interface for the listing data as it comes from the backend/DB
-// This should align with your actual database table columns and joined data
-export interface BackendListing {
-  id: number;
-  seller_id: number;
-  mineral_type: string;
-  description: string;
-  quantity: number;
-  unit: string;
-  price_per_unit: number;
-  currency: string;
-  location: string;
-  status: 'available' | 'pending' | 'sold' | 'canceled';
-  created_at: Date;
-  updated_at: Date;
-  // Joined seller details (from users table)
-  seller_company_name?: string;
-  seller_location?: string;
-  seller_compliance_status?: 'pending' | 'compliant' | 'non_compliant';
-}
+// Import BackendListing and input types from the model, which is the source of truth
+import { BackendListing, CreateListingInput, UpdateListingInput } from '../models/listingModel.js';
 
 const listingService = new ListingService();
 
@@ -65,7 +46,7 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
       throw new ApplicationError(error.details[0].message, 400);
     }
 
-    const newListing = await listingService.createListing({
+    const listingData: CreateListingInput = {
       seller_id: req.user.id, // Seller ID from authenticated user
       mineral_type: value.mineralType,
       description: value.description,
@@ -75,7 +56,9 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
       currency: value.currency,
       location: value.location,
       status: 'available', // Default status for new listings
-    });
+    };
+
+    const newListing = await listingService.createListing(listingData);
 
     // Map BackendListing to Frontend Listing for response
     const frontendListing = {
@@ -89,10 +72,11 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
       currency: newListing.currency,
       location: newListing.location,
       status: newListing.status,
-      listed_date: newListing.created_at.toISOString(),
-      last_updated: newListing.updated_at.toISOString(),
-      created_at: newListing.created_at.toISOString(),
-      updated_at: newListing.updated_at.toISOString(),
+      // Ensure created_at/updated_at are Date objects before calling toISOString()
+      listed_date: newListing.created_at instanceof Date ? newListing.created_at.toISOString() : newListing.created_at,
+      last_updated: newListing.updated_at instanceof Date ? newListing.updated_at.toISOString() : newListing.updated_at,
+      created_at: newListing.created_at instanceof Date ? newListing.created_at.toISOString() : newListing.created_at,
+      updated_at: newListing.updated_at instanceof Date ? newListing.updated_at.toISOString() : newListing.updated_at,
       // Seller details are not available on creation, will be fetched on display
     };
 
@@ -107,9 +91,9 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
  */
 export const getAllListings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const listings = await listingService.getAllListingsWithSellerDetails(); // NEW method
+    const listings = await listingService.getAllListingsWithSellerDetails(); // Correct method call
     // Map BackendListing (with joined seller data) to Frontend Listing for response
-    const frontendListings = listings.map(listing => ({
+    const frontendListings = listings.map((listing: BackendListing) => ({ // Explicitly type 'listing'
       id: listing.id,
       seller_id: listing.seller_id,
       mineral_type: listing.mineral_type,
@@ -120,10 +104,10 @@ export const getAllListings = async (req: Request, res: Response, next: NextFunc
       currency: listing.currency,
       location: listing.location,
       status: listing.status,
-      listed_date: listing.created_at.toISOString(),
-      last_updated: listing.updated_at.toISOString(),
-      created_at: listing.created_at.toISOString(),
-      updated_at: listing.updated_at.toISOString(),
+      listed_date: listing.created_at instanceof Date ? listing.created_at.toISOString() : listing.created_at,
+      last_updated: listing.updated_at instanceof Date ? listing.updated_at.toISOString() : listing.updated_at,
+      created_at: listing.created_at instanceof Date ? listing.created_at.toISOString() : listing.created_at,
+      updated_at: listing.updated_at instanceof Date ? listing.updated_at.toISOString() : listing.updated_at,
       seller_company_name: listing.seller_company_name, // Include joined data
       seller_location: listing.seller_location,         // Include joined data
       seller_compliance_status: listing.seller_compliance_status, // Include joined data
@@ -144,7 +128,7 @@ export const getListingById = async (req: Request, res: Response, next: NextFunc
       throw new ApplicationError('Invalid listing ID provided.', 400);
     }
 
-    const listing = await listingService.getListingByIdWithSellerDetails(listingId); // NEW method
+    const listing = await listingService.getListingByIdWithSellerDetails(listingId); // Correct method call
     if (!listing) {
       throw new ApplicationError('Listing not found.', 404);
     }
@@ -161,10 +145,10 @@ export const getListingById = async (req: Request, res: Response, next: NextFunc
       currency: listing.currency,
       location: listing.location,
       status: listing.status,
-      listed_date: listing.created_at.toISOString(),
-      last_updated: listing.updated_at.toISOString(),
-      created_at: listing.created_at.toISOString(),
-      updated_at: listing.updated_at.toISOString(),
+      listed_date: listing.created_at instanceof Date ? listing.created_at.toISOString() : listing.created_at,
+      last_updated: listing.updated_at instanceof Date ? listing.updated_at.toISOString() : listing.updated_at,
+      created_at: listing.created_at instanceof Date ? listing.created_at.toISOString() : listing.created_at,
+      updated_at: listing.updated_at instanceof Date ? listing.updated_at.toISOString() : listing.updated_at,
       seller_company_name: listing.seller_company_name, // Include joined data
       seller_location: listing.seller_location,         // Include joined data
       seller_compliance_status: listing.seller_compliance_status, // Include joined data
@@ -175,6 +159,45 @@ export const getListingById = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
+
+/**
+ * Gets all mineral listings for a specific seller.
+ * Requires authentication.
+ */
+export const getListingsBySeller = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw new ApplicationError('User not authenticated.', 401);
+    }
+    const sellerId = req.user.id; // Get listings for the authenticated user
+
+    const listings = await listingService.getListingsBySellerId(sellerId); // Correct method call
+
+    const frontendListings = listings.map((listing: BackendListing) => ({ // Explicitly type 'listing'
+      id: listing.id,
+      seller_id: listing.seller_id,
+      mineral_type: listing.mineral_type,
+      description: listing.description,
+      quantity: listing.quantity,
+      unit: listing.unit,
+      price_per_unit: listing.price_per_unit,
+      currency: listing.currency,
+      location: listing.location,
+      status: listing.status,
+      listed_date: listing.created_at instanceof Date ? listing.created_at.toISOString() : listing.created_at,
+      last_updated: listing.updated_at instanceof Date ? listing.updated_at.toISOString() : listing.updated_at,
+      created_at: listing.created_at instanceof Date ? listing.created_at.toISOString() : listing.created_at,
+      updated_at: listing.updated_at instanceof Date ? listing.updated_at.toISOString() : listing.updated_at,
+      seller_company_name: listing.seller_company_name,
+      seller_location: listing.seller_location,
+      seller_compliance_status: listing.seller_compliance_status,
+    }));
+    res.status(200).json(frontendListings);
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 /**
  * Updates an existing mineral listing.
@@ -219,10 +242,10 @@ export const updateListing = async (req: Request, res: Response, next: NextFunct
       currency: updatedListing.currency,
       location: updatedListing.location,
       status: updatedListing.status,
-      listed_date: updatedListing.created_at.toISOString(),
-      last_updated: updatedListing.updated_at.toISOString(),
-      created_at: updatedListing.created_at.toISOString(),
-      updated_at: updatedListing.updated_at.toISOString(),
+      listed_date: updatedListing.created_at instanceof Date ? updatedListing.created_at.toISOString() : updatedListing.created_at,
+      last_updated: updatedListing.updated_at instanceof Date ? updatedListing.updated_at.toISOString() : updatedListing.updated_at,
+      created_at: updatedListing.created_at instanceof Date ? updatedListing.created_at.toISOString() : updatedListing.created_at,
+      updated_at: updatedListing.updated_at instanceof Date ? updatedListing.updated_at.toISOString() : updatedListing.updated_at,
     };
 
     res.status(200).json({ message: 'Listing updated successfully!', listing: frontendListing });

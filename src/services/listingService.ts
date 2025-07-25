@@ -1,143 +1,73 @@
 // src/services/listingService.ts
-import { pgPool as pool } from '../config/database.js';
+import { ListingModel, BackendListing, CreateListingInput, UpdateListingInput } from '../models/listingModel.js'; // Import types and Model from the new file
 import { ApplicationError } from '../utils/applicationError.js';
 
-// Interface for a mineral listing (matches database schema)
-export interface Listing {
-  id?: number;
-  seller_id: number;
-  mineral_type: string;
-  description: string;
-  quantity: number;
-  unit: string;
-  price_per_unit: number;
-  currency: string;
-  location: string;
-  status?: 'available' | 'pending' | 'sold' | 'canceled';
-  listed_date?: string;
-  last_updated?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// Interface for listing filters
-export interface ListingFilters {
-  mineralType?: string;
-  location?: string;
-  status?: 'available' | 'pending' | 'sold' | 'canceled';
-  minPrice?: number;
-  maxPrice?: number;
-}
+const listingModel = new ListingModel();
 
 export class ListingService {
-  private pool = pool;
-
-  // Create a new mineral listing
-  async createListing(listingData: Listing): Promise<Listing> {
-    const { seller_id, mineral_type, description, quantity, unit, price_per_unit, currency, location } = listingData;
-    try {
-      const result = await this.pool.query(
-        `INSERT INTO mineral_listings (seller_id, mineral_type, description, quantity, unit, price_per_unit, currency, location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING *`,
-        [seller_id, mineral_type, description, quantity, unit, price_per_unit, currency, location] // <-- CORRECTED TYPO HERE
-      );
-      return result.rows[0];
-    } catch (error) {
-      throw new ApplicationError('Failed to create listing.', 500, error as Error);
-    }
+  /**
+   * Creates a new listing.
+   * @param data - The listing data.
+   * @returns The created listing.
+   */
+  async createListing(data: CreateListingInput): Promise<BackendListing> {
+    return listingModel.createListing(data);
   }
 
-  // Get all mineral listings
-  async getAllListings(): Promise<Listing[]> {
-    try {
-      const result = await this.pool.query('SELECT * FROM mineral_listings ORDER BY created_at DESC');
-      return result.rows;
-    } catch (error) {
-      throw new ApplicationError('Failed to retrieve listings.', 500, error as Error);
-    }
+  /**
+   * Gets a listing by ID (internal use, no seller details).
+   * @param id - The listing ID.
+   * @returns The listing.
+   */
+  async getListingById(id: number): Promise<BackendListing | null> {
+    return listingModel.getListingById(id);
   }
 
-  // Get a single mineral listing by ID
-  async getListingById(id: number): Promise<Listing | null> {
-    try {
-      const result = await this.pool.query('SELECT * FROM mineral_listings WHERE id = $1', [id]);
-      if (result.rows.length === 0) {
-        return null;
-      }
-      return result.rows[0];
-    } catch (error) {
-      throw new ApplicationError('Failed to retrieve listing by ID.', 500, error as Error);
-    }
+  /**
+   * Gets all listings with joined seller details.
+   * @returns An array of listings.
+   */
+  async getAllListingsWithSellerDetails(): Promise<BackendListing[]> {
+    return listingModel.getAllListingsWithSellerDetails();
   }
 
-  // Update a mineral listing
-  async updateListing(listingId: number, sellerId: number, updateData: Partial<Listing>): Promise<Listing> {
-    console.log(`[ListingService] updateListing called with: listingId=${listingId}, sellerId=${sellerId}, updateData=`, updateData); // Debug log
-
-    const fields = Object.keys(updateData)
-      .map((key, index) => `${key} = $${index + 3}`) // $3, $4, ... for dynamic fields
-      .join(', ');
-    const values = Object.values(updateData);
-
-    if (fields.length === 0) {
-      throw new ApplicationError('No valid fields provided for update.', 400);
-    }
-
-    try {
-      const result = await this.pool.query(
-        `UPDATE mineral_listings
-         SET ${fields}, last_updated = CURRENT_TIMESTAMP
-         WHERE id = $1 AND seller_id = $2
-         RETURNING *`,
-        [listingId, sellerId, ...values] // $1 for listingId, $2 for sellerId, then dynamic values
-      );
-
-      if (result.rows.length === 0) {
-        // Check if listing exists but seller_id doesn't match
-        const existingListing = await this.getListingById(listingId);
-        if (existingListing) {
-          throw new ApplicationError('Forbidden: You do not have permission to update this listing.', 403);
-        }
-        throw new ApplicationError('Listing not found.', 404);
-      }
-      return result.rows[0];
-    } catch (error) {
-      console.error("[ListingService] Error updating listing:", error); // Debug log
-      throw new ApplicationError('Failed to update listing.', 500, error as Error);
-    }
+  /**
+   * Gets a single listing by ID with joined seller details.
+   * @param id - The listing ID.
+   * @returns The listing.
+   */
+  async getListingByIdWithSellerDetails(id: number): Promise<BackendListing | null> {
+    return listingModel.getListingByIdWithSellerDetails(id);
   }
 
-  // Delete a mineral listing
-  async deleteListing(listingId: number, sellerId: number): Promise<void> {
-    try {
-      const result = await this.pool.query(
-        `DELETE FROM mineral_listings WHERE id = $1 AND seller_id = $2`,
-        [listingId, sellerId]
-      );
-      if (result.rowCount === 0) {
-        // Check if listing exists but seller_id doesn't match
-        const existingListing = await this.getListingById(listingId);
-        if (existingListing) {
-          throw new ApplicationError('Forbidden: You do not have permission to delete this listing.', 403);
-        }
-        throw new ApplicationError('Listing not found.', 404);
-      }
-    } catch (error) {
-      throw new ApplicationError('Failed to delete listing.', 500, error as Error);
-    }
+  /**
+   * Gets all listings by a specific seller ID with seller details.
+   * @param sellerId - The ID of the seller.
+   * @returns An array of listings.
+   */
+  async getListingsBySellerId(sellerId: number): Promise<BackendListing[]> {
+    return listingModel.getListingsBySellerId(sellerId);
   }
 
-  // Get listings by seller ID
-  async getListingsBySeller(sellerId: number): Promise<Listing[]> {
-    try {
-      const result = await this.pool.query(
-        `SELECT * FROM mineral_listings WHERE seller_id = $1 ORDER BY created_at DESC`,
-        [sellerId]
-      );
-      return result.rows;
-    } catch (error) {
-      throw new ApplicationError('Failed to retrieve listings by seller.', 500, error as Error);
+  /**
+   * Updates an existing listing.
+   * @param id - The listing ID.
+   * @param updates - Fields to update.
+   * @returns The updated listing.
+   */
+  async updateListing(id: number, updates: UpdateListingInput): Promise<BackendListing> {
+    const updatedListing = await listingModel.updateListing(id, updates);
+    if (!updatedListing) {
+      throw new ApplicationError('Listing not found or could not be updated.', 404);
     }
+    return updatedListing;
+  }
+
+  /**
+   * Deletes a listing.
+   * @param id - The listing ID.
+   */
+  async deleteListing(id: number): Promise<void> {
+    await listingModel.deleteListing(id);
   }
 }
