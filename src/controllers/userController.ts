@@ -3,10 +3,8 @@ import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/userService.js'; // Assuming UserService exists and uses UserModel
 import { ApplicationError } from '../utils/applicationError.js';
 import Joi from 'joi';
-// Assuming BackendUser and UserInput are defined in a shared interface file or directly in UserModel.ts
-// For this example, I'll assume BackendUser is imported or defined in UserModel.ts and accessible.
-// If you have a separate interfaces/user.ts, ensure it's updated and imported here.
-import { BackendUser, UserInput } from '../models/userModel.js'; // Adjust path if BackendUser is elsewhere
+// Corrected import: Ensure BackendUser and UserInput are imported ONLY from userModel.js
+import { BackendUser, UserInput } from '../models/userModel.js'; // Correct path and source for types
 
 const userService = new UserService();
 
@@ -166,7 +164,8 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
     };
 
     // Conditionally add buyer-specific fields if they exist in the validated value
-    if (req.user.role === 'buyer') { // Assuming req.user has the role
+    // Use req.user.role to determine current user's role for conditional updates
+    if (req.user.role === 'buyer') {
         if (value.preferredMineralTypes !== undefined) {
             updates.preferred_mineral_types = value.preferredMineralTypes;
         }
