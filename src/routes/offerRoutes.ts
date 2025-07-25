@@ -31,5 +31,5 @@ router.put('/:id/status', authorizeRoles(['miner', 'admin']), updateOfferStatus)
 // Get a specific offer by ID (optional, but good for detail views)
 router.get('/:id', authorizeRoles(['buyer', 'miner', 'admin']), getOfferById);
 
-// Export as a named export for app.ts
-export const offerRoutes = router;
+// Export the router as a named export directly
+export { router }; // <--- CHANGED: Export 'router' as a named export

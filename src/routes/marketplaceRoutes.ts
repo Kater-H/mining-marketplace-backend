@@ -29,5 +29,5 @@ router.delete('/:id', authorizeRoles(['miner', 'admin']), deleteListing);
 // Get listings by the authenticated seller (miner/admin)
 router.get('/my-listings/seller', authorizeRoles(['miner', 'admin']), getListingsBySeller);
 
-// Export as a named export for app.ts
-export const marketplaceRoutes = router;
+// Export the router as a named export directly
+export { router }; // <--- CHANGED: Export 'router' as a named export
