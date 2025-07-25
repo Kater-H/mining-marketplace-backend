@@ -1,6 +1,6 @@
 // src/services/userService.ts
 import { UserModel, BackendUser, UserInput } from '../models/userModel.js'; // Import BackendUser and UserInput from userModel
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs'; // <--- CHANGED: Import bcryptjs instead of bcrypt
 import jwt from 'jsonwebtoken';
 import { ApplicationError } from '../utils/applicationError.js'; // Assuming this utility exists
 
