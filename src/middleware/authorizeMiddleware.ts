@@ -1,37 +1,30 @@
 // src/middleware/authorizeMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
-import { ApplicationError } from '../utils/applicationError.js'; // Ensure .js extension
+import { ApplicationError } from '../utils/applicationError.js'; // Assuming this utility exists
 
-// Extend the Request type to include the user property
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        role: 'buyer' | 'miner' | 'admin';
-        email: string;
-      };
-    }
-  }
-}
+// REMOVED: The 'declare global' block should NOT be here if it's already in authMiddleware.ts
+// or if you have a central types/express.d.ts file.
+// Keeping it in one place prevents TS2717 errors.
 
 /**
- * Middleware to authorize users based on their roles.
- * @param allowedRoles An array of roles that are permitted to access the route.
+ * Middleware to authorize requests based on user roles.
+ * @param allowedRoles - An array of roles that are allowed to access the route.
  */
 export const authorizeRoles = (allowedRoles: Array<'buyer' | 'miner' | 'admin'>) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Check if user is authenticated (req.user should be set by authenticate middleware)
-    if (!req.user) {
-      return next(new ApplicationError('Authentication required.', 401));
+    // Check if user is authenticated and has a role
+    // req.user is expected to be populated by the 'authenticate' middleware
+    if (!req.user || !req.user.role) {
+      console.log('❌ Access denied: User not authenticated or role missing.');
+      return next(new ApplicationError('Access denied: Authentication required.', 403));
     }
 
-    // Check if the user's role is included in the allowedRoles
+    // Check if the user's single role is included in the allowedRoles array
     if (!allowedRoles.includes(req.user.role)) {
-      return next(new ApplicationError('Forbidden: You do not have the necessary permissions.', 403));
+      console.log(`❌ Access denied: User role '${req.user.role}' not in allowed roles [${allowedRoles.join(', ')}].`);
+      return next(new ApplicationError('Access denied: Insufficient permissions.', 403));
     }
 
-    // If authorized, proceed to the next middleware/route handler
-    next();
+    next(); // User has the required role, proceed
   };
 };
