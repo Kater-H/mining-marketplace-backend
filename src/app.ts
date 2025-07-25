@@ -9,7 +9,12 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 // --- Import your routes ---
-// OPTION A: If your route files use 'export default router;'
+// IMPORTANT: Choose ONE of the options below based on how your route files export their routers.
+// If a route file uses 'export default router;', use the 'import X from Y;' style.
+// If a route file uses 'export const router = Router();' or 'export { router };', use 'import { router as X } from Y;' style.
+
+// Option A: Use this if ALL your route files use 'export default router;'
+// If you have mixed exports, you will need to mix these import styles accordingly.
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import listingRoutes from './routes/listingRoutes.js';
@@ -17,9 +22,11 @@ import offerRoutes from './routes/offerRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import marketplaceRoutes from './routes/marketplaceRoutes.js';
 
-// OPTION B: If your route files use 'export const router = Router();' or 'export { router };'
-// In this case, you would uncomment these and comment out OPTION A imports.
-// import { router as authRoutes } from './routes/authRoutes.js';
+
+// Option B: Use this if ALL your route files use 'export const router = Router();' or 'export { router };'
+// If you have mixed exports, you will need to mix these import styles accordingly.
+// For example, if authRoutes uses default, but userRoutes uses named:
+// import authRoutes from './routes/authRoutes.js';
 // import { router as userRoutes } from './routes/userRoutes.js';
 // import { router as listingRoutes } from './routes/listingRoutes.js';
 // import { router as offerRoutes } from './routes/offerRoutes.js';
