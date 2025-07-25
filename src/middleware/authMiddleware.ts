@@ -1,55 +1,79 @@
 // src/middleware/authMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/config.js';
-import { ApplicationError } from '../utils/applicationError.js';
+import { ApplicationError } from '../utils/applicationError.js'; // Assuming this utility exists
 
-// Extend the Request type to include the user property
+// Extend the Request type to include a user property
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: number;
-        role: 'buyer' | 'miner' | 'admin'; // Directly use literal types
-        email: string;
+        role: 'buyer' | 'miner' | 'admin';
       };
     }
   }
 }
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  console.log('🔍 Auth middleware called - checking JWT token...');
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; // Use environment variable for secret
 
-  if (!token) {
-    console.log('❌ No token provided.');
-    return next(new ApplicationError('Authentication token required.', 401));
+/**
+ * Middleware to authenticate requests using JWT.
+ */
+export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  console.log('🔍 Auth middleware called - checking JWT token...');
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('❌ Authentication token missing or malformed.');
+    return next(new ApplicationError('Authentication token missing or malformed.', 401));
   }
 
-  console.log('🔍 Authorization header:', authHeader);
-  console.log('🔍 Extracted token:', token.substring(0, 5) + '...'); // Log first 5 chars for debugging
+  const token = authHeader.split(' ')[1];
+  console.log('🔍 Extracted token:', token.substring(0, 5) + '...'); // Log first few chars
 
-  jwt.verify(token, config.jwtSecret, (err, user) => {
-    if (err) {
-      console.log('❌ JWT token verification failed:', err.message);
-      // Handle specific JWT errors
-      if (err.name === 'TokenExpiredError') {
-        return next(new ApplicationError('Authentication token expired.', 401));
-      }
-      return next(new ApplicationError('Invalid authentication token.', 403));
-    }
-
-    // Ensure user object matches the expected structure
-    const decodedUser = user as { id: number; email: string; roles: Array<'buyer' | 'miner' | 'admin'> };
-    console.log('✅ JWT token verified successfully:', decodedUser);
+  try {
+    // Verify the token using the secret
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: 'buyer' | 'miner' | 'admin'; iat: number; exp: number };
+    console.log('✅ JWT token verified successfully:', decoded);
 
     // Attach user information to the request object
+    // IMPORTANT: Use 'role' (singular) as per your JWT payload
     req.user = {
-      id: decodedUser.id,
-      email: decodedUser.email,
-      role: decodedUser.roles[0], // Assuming single role for simplicity
+      id: decoded.id,
+      role: decoded.role,
     };
-    next();
-  });
+    next(); // Proceed to the next middleware/route handler
+  } catch (error: any) {
+    console.log('❌ JWT token verification failed:', error.message);
+    if (error.name === 'TokenExpiredError') {
+      console.log('❌ Global Error Handler Caught: ApplicationError: Authentication token expired.');
+      return next(new ApplicationError('Authentication token expired.', 401));
+    }
+    console.log('❌ Global Error Handler Caught: ApplicationError: Invalid authentication token.');
+    return next(new ApplicationError('Invalid authentication token.', 401));
+  }
+};
+
+/**
+ * Middleware to authorize requests based on user roles.
+ * @param allowedRoles - An array of roles that are allowed to access the route.
+ */
+export const authorizeRoles = (allowedRoles: Array<'buyer' | 'miner' | 'admin'>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Check if user is authenticated and has a role
+    if (!req.user || !req.user.role) {
+      console.log('❌ Access denied: User not authenticated or role missing.');
+      return next(new ApplicationError('Access denied: Authentication required.', 403));
+    }
+
+    // Check if the user's single role is included in the allowedRoles array
+    // This is the line that was likely causing the error if it was trying to access roles[0]
+    if (!allowedRoles.includes(req.user.role)) {
+      console.log(`❌ Access denied: User role '${req.user.role}' not in allowed roles [${allowedRoles.join(', ')}].`);
+      return next(new ApplicationError('Access denied: Insufficient permissions.', 403));
+    }
+
+    next(); // User has the required role, proceed
+  };
 };
