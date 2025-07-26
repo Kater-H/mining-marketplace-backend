@@ -18,7 +18,7 @@ import dotenv from 'dotenv';
 import { router as authRoutes } from './routes/authRoutes.js';
 import { router as userRoutes } from './routes/userRoutes.js';
 import { router as listingRoutes } from './routes/listingRoutes.js';
-import { router as offerRoutes } from './routes/offerRoutes.js';
+import { router as offerRoutes } from './routes/offerRoutes.js'; // This is the one we need to mount
 import paymentRoutesRouter from './routes/paymentRoutes.js'; // <--- CORRECTED: Default import for paymentRoutes
 import { router as marketplaceRoutes } from './routes/marketplaceRoutes.js';
 
@@ -69,9 +69,13 @@ app.use(limiter);
 // --- Apply Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/marketplace', marketplaceRoutes);
-// Use the correctly imported default export for paymentRoutes
+app.use('/api/marketplace', marketplaceRoutes); // This mounts marketplaceRoutes at /api/marketplace
 app.use('/api/payments', paymentRoutesRouter);
+
+// NEW: Mount offerRoutes directly under /api/marketplace/offers
+// This assumes that offerRoutes.ts defines its routes relative to /offers (e.g., /my-offers)
+// So, /api/marketplace/offers + /my-offers = /api/marketplace/offers/my-offers
+app.use('/api/marketplace/offers', offerRoutes);
 
 
 app.get('/', (req, res) => {
