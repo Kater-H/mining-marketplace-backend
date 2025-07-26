@@ -1,33 +1,39 @@
 // src/routes/marketplaceRoutes.ts
 import { Router } from 'express';
-// Corrected imports from listingController.js
 import {
   createListing,
-  getAllListings, // Corrected name
-  getListingById, // Corrected name
+  getAllListings,
+  getListingById,
   updateListing,
   deleteListing,
   getListingsBySeller,
-} from '../controllers/listingController.js'; // Ensure this path and filename casing is correct!
+} from '../controllers/listingController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/authorizeMiddleware.js'; // This path must be correct!
+import { authorizeRoles } from '../middleware/authorizeMiddleware.js';
+import { router as offerRoutes } from './offerRoutes.js'; // Ensure this is imported if you're mounting offers here
 
 const router = Router();
 
 // Public routes (no authentication needed to view listings)
-router.get('/', getAllListings);
-router.get('/:id', getListingById);
+// Route for ALL listings: /api/marketplace/listings
+router.get('/listings', getAllListings); // <--- CORRECTED: Explicitly define '/listings' for all
+// Route for a SINGLE listing by ID: /api/marketplace/listings/:id
+router.get('/listings/:id', getListingById); // <--- CORRECTED: Explicitly define '/listings/:id' for single
 
 // Authenticated routes
 router.use(authenticate); // All routes below this will require authentication
 
+// Mount offerRoutes under /offers within marketplaceRoutes
+// This creates paths like /api/marketplace/offers/my-offers
+router.use('/offers', offerRoutes); // Ensure this line is present if offers are nested under marketplace
+
 // Seller-specific routes (only 'miner' and 'admin' roles can manage listings)
-router.post('/', authorizeRoles(['miner', 'admin']), createListing);
-router.put('/:id', authorizeRoles(['miner', 'admin']), updateListing);
-router.delete('/:id', authorizeRoles(['miner', 'admin']), deleteListing);
+router.post('/listings', authorizeRoles(['miner', 'admin']), createListing);
+router.put('/listings/:id', authorizeRoles(['miner', 'admin']), updateListing);
+router.delete('/listings/:id', authorizeRoles(['miner', 'admin']), deleteListing);
 
 // Get listings by the authenticated seller (miner/admin)
 router.get('/my-listings/seller', authorizeRoles(['miner', 'admin']), getListingsBySeller);
 
-// Export the router as a named export directly
-export { router }; // <--- CHANGED: Export 'router' as a named export
+// Export the router as a named export
+export { router };
