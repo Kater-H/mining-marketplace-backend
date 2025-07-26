@@ -15,10 +15,13 @@ import { router as offerRoutes } from './offerRoutes.js'; // Ensure this is impo
 const router = Router();
 
 // Public routes (no authentication needed to view listings)
-// Route for ALL listings: /api/marketplace/listings
-router.get('/listings', getAllListings); // <--- CORRECTED: Explicitly define '/listings' for all
-// Route for a SINGLE listing by ID: /api/marketplace/listings/:id
-router.get('/listings/:id', getListingById); // <--- CORRECTED: Explicitly define '/listings/:id' for single
+
+// IMPORTANT: Define the route for ALL listings FIRST
+router.get('/listings', getAllListings); // <--- THIS MUST COME BEFORE /listings/:id
+
+// Then, define the route for a SINGLE listing by ID
+router.get('/listings/:id', getListingById);
+
 
 // Authenticated routes
 router.use(authenticate); // All routes below this will require authentication

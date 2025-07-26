@@ -29,6 +29,9 @@ dotenv.config();
 
 const app = express();
 
+// --- NEW: Add this line to trust proxy headers for Render ---
+app.set('trust proxy', 1); // 1 means trust the first proxy, which is Render's load balancer
+
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -72,7 +75,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/marketplace', marketplaceRoutes); // This mounts marketplaceRoutes at /api/marketplace
 app.use('/api/payments', paymentRoutesRouter);
 
-// NEW: Mount offerRoutes directly under /api/marketplace/offers
+// Mount offerRoutes directly under /api/marketplace/offers
 // This assumes that offerRoutes.ts defines its routes relative to /offers (e.g., /my-offers)
 // So, /api/marketplace/offers + /my-offers = /api/marketplace/offers/my-offers
 app.use('/api/marketplace/offers', offerRoutes);
