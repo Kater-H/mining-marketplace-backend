@@ -17,9 +17,11 @@ const router = Router();
 // Public routes (no authentication needed to view listings)
 
 // IMPORTANT: Define the route for ALL listings FIRST
-router.get('/listings', getAllListings); // <--- THIS MUST COME BEFORE /listings/:id
+// This handles GET /api/marketplace/listings/listings
+router.get('/listings', getAllListings);
 
 // Then, define the route for a SINGLE listing by ID
+// This handles GET /api/marketplace/listings/listings/:id
 router.get('/listings/:id', getListingById);
 
 
