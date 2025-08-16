@@ -18,8 +18,8 @@ import dotenv from 'dotenv';
 import { router as authRoutes } from './routes/authRoutes.js';
 import { router as userRoutes } from './routes/userRoutes.js';
 import { router as listingRoutes } from './routes/listingRoutes.js';
-import { router as offerRoutes } from './routes/offerRoutes.js'; 
-import paymentRoutesRouter from './routes/paymentRoutes.js'; 
+import { router as offerRoutes } from './routes/offerRoutes.js'; // This is the one we need to mount
+import paymentRoutesRouter from './routes/paymentRoutes.js'; // <--- CORRECTED: Default import for paymentRoutes
 import { router as marketplaceRoutes } from './routes/marketplaceRoutes.js';
 
 
@@ -30,7 +30,7 @@ dotenv.config();
 const app = express();
 
 // --- NEW: Add this line to trust proxy headers for Render ---
-app.set('trust proxy', 1); // 1 means trust the first proxy, which is Render's load balancer
+app.set('trust proxy', 1); // 1 means trust the first proxy
 
 const allowedOrigins = [
   'http://localhost:5173',
@@ -72,18 +72,22 @@ app.use(limiter);
 // --- Apply Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/marketplace', marketplaceRoutes); // Marketplace routes are now nested under this
+app.use('/api/marketplace', marketplaceRoutes); // This mounts marketplaceRoutes at /api/marketplace
 app.use('/api/payments', paymentRoutesRouter);
 
-// We no longer need this line because we are mounting `offerRoutes`
-// inside `marketplaceRoutes.ts` to prevent double-mounting.
-// app.use('/api/marketplace/offers', offerRoutes);
+// Mount offerRoutes directly under /api/marketplace/offers
+// This assumes that offerRoutes.ts has its own `Router()` instance and handles
+// the sub-paths from there (e.g., `/my-offers`).
+app.use('/api/marketplace/offers', offerRoutes);
 
-
-app.get('/', (req, res) => {
-  res.status(200).send('Mining Marketplace Backend API is running!');
-});
-
+// General error handler middleware
 app.use(errorHandler);
 
-export default app;
+// --- NEW: Server startup ---
+// Get the port from environment variables or use a default
+const PORT = process.env.PORT || 3000;
+
+// Tell the application to start listening for requests
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
