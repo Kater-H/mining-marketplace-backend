@@ -83,7 +83,7 @@ app.use('/api/marketplace/offers', offerRoutes);
 // General error handler middleware
 app.use(errorHandler);
 
-// --- NEW: Server startup ---
+// --- Server startup ---
 // Get the port from environment variables or use a default
 const PORT = process.env.PORT || 3000;
 
@@ -91,3 +91,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// --- NEW: Export the app for use in your server.ts file ---
+export default app;
