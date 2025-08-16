@@ -36,6 +36,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://mining-marketplace-frontend-XXXX.onrender.com', // Replace with your actual Render frontend URL
+  'https://mining-marketplace-frontend-pig6.onrender.com', // NEW: Added your specific new Render frontend URL
   // Add any other frontend URLs that need to access this backend
 ];
 
@@ -70,8 +71,10 @@ app.use(limiter);
 
 
 // --- Apply Routes ---
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// The frontend is calling /api/users/register, so we're mounting the auth routes
+// at the /api/users path to match the frontend's API calls.
+// This means the registration and login routes will now be /api/users/register and /api/users/login.
+app.use('/api/users', userRoutes, authRoutes);
 app.use('/api/marketplace', marketplaceRoutes); // This mounts marketplaceRoutes at /api/marketplace
 app.use('/api/payments', paymentRoutesRouter);
 
