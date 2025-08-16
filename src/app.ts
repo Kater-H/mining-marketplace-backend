@@ -32,18 +32,17 @@ const app = express();
 // --- NEW: Add this line to trust proxy headers for Render ---
 app.set('trust proxy', 1); // 1 means trust the first proxy
 
+// --- CORS Configuration ---
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://mining-marketplace-frontend-XXXX.onrender.com', // Replace with your actual Render frontend URL
-  'https://mining-marketplace-frontend-pig6.onrender.com', // NEW: Added your specific new Render frontend URL
-  // Add any other frontend URLs that need to access this backend
+  'https://mining-marketplace-frontend-pig6.onrender.com' // <-- ADDED: The new frontend URL
 ];
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -71,28 +70,21 @@ app.use(limiter);
 
 
 // --- Apply Routes ---
-// These are the correct, separate routes for authentication and user-related tasks.
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/marketplace', marketplaceRoutes); // This mounts marketplaceRoutes at /api/marketplace
 app.use('/api/payments', paymentRoutesRouter);
 
-// Mount offerRoutes directly under /api/marketplace/offers
-// This assumes that offerRoutes.ts has its own `Router()` instance and handles
-// the sub-paths from there (e.g., `/my-offers`).
+// NEW: Mount offerRoutes directly under /api/marketplace/offers
+// This assumes that offerRoutes.ts exports 'router'
 app.use('/api/marketplace/offers', offerRoutes);
 
-// General error handler middleware
+// --- Error Handler Middleware ---
 app.use(errorHandler);
 
-// --- Server startup ---
-// Get the port from environment variables or use a default
-const PORT = process.env.PORT || 3000;
 
-// Tell the application to start listening for requests
+// --- Server Listener ---
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
-
-// --- NEW: Export the app for use in your server.ts file ---
-export default app;
