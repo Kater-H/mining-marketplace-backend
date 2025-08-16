@@ -71,10 +71,9 @@ app.use(limiter);
 
 
 // --- Apply Routes ---
-// The frontend is calling /api/users/register, so we're mounting the auth routes
-// at the /api/users path to match the frontend's API calls.
-// This means the registration and login routes will now be /api/users/register and /api/users/login.
-app.use('/api/users', userRoutes, authRoutes);
+// These are the correct, separate routes for authentication and user-related tasks.
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/marketplace', marketplaceRoutes); // This mounts marketplaceRoutes at /api/marketplace
 app.use('/api/payments', paymentRoutesRouter);
 
