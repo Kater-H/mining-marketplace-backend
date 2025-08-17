@@ -33,28 +33,7 @@ const app = express();
 app.set('trust proxy', 1); // 1 means trust the first proxy
 
 // --- CORS Configuration ---
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://mining-marketplace-frontend-pig6.onrender.com' // <-- ADDED: The new frontend URL
-];
-
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
+app.use(cors()); // Temporarily allow all origins for debugging - Attempt 2
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
