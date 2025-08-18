@@ -38,7 +38,7 @@ export class UserService {
       location,
     });
 
-    const token = jwt.sign({ id: newUser.id, role: newUser.role }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: newUser.id, role: newUser.role }, JWT_SECRET, { expiresIn: '7d' });
 
     return { user: newUser, token };
   }
@@ -55,7 +55,7 @@ export class UserService {
       throw new ApplicationError('Invalid credentials.', 401);
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
     return { user, token };
   }
